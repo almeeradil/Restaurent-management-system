@@ -233,7 +233,7 @@
                 <NavItem icon={<Icon name="shopping-bag" className="w-4 h-4" />} label="POS / Order Counter" active={activeTab === 'pos'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('pos')} badge="Live" />
                 <NavItem icon={<Icon name="utensils-crossed" className="w-4 h-4" />} label="Kitchen Display (KDS)" active={activeTab === 'kds'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('kds')} badge={orders.filter((o) => o.status !== 'Completed' && o.status !== 'Cancelled').length} badgeColor="bg-amber-100 text-amber-700 font-bold" />
                 <NavItem icon={<Icon name="clipboard-list" className="w-4 h-4" />} label="Order History & List" active={activeTab === 'orders'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('orders')} />
-                <NavItem icon={<Icon name="cash-register" className="w-4 h-4" />} label="Cash Register & Shift Z-Report" active={activeTab === 'register'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('register')} />
+                <NavItem icon={<Icon name="calculator" className="w-4 h-4 text-orange-500" />} label="Cash Register & Shift Z-Report" active={activeTab === 'register'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('register')} />
 
                 <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1 pt-2">Financials & Costs</div>
                 <NavItem icon={<Icon name="line-chart" className="w-4 h-4" />} label="Sales & Financial Reports" active={activeTab === 'reports'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('reports')} />
@@ -295,9 +295,9 @@
                       onChange={(e) => setSelectedBranchId(e.target.value)}
                       className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer pr-2"
                     >
-                      <option value="all" className="bg-white text-slate-900">?? All Branches (Aggregated PKR)</option>
+                      <option value="all" className="bg-white text-slate-900">🌐 All Branches (Aggregated PKR)</option>
                       {branches.map((b) => (
-                        <option key={b.id} value={b.id} className="bg-white text-slate-900">?? {b.name}</option>
+                        <option key={b.id} value={b.id} className="bg-white text-slate-900">📍 {b.name}</option>
                       ))}
                     </select>
                   </div>
@@ -320,7 +320,7 @@
                   >
                     {users.map((u) => (
                       <option key={u.id} value={u.id} className="bg-white text-slate-900">
-                        {u.name}  {u.role}
+                        {u.name} — {u.role}
                       </option>
                     ))}
                   </select>
@@ -402,7 +402,7 @@
     }
 
     // ==========================================
-    // MODULE: DASHBOARD OVERVIEW (PKR CURRENCY)
+    // MODULE 1: DASHBOARD OVERVIEW (8 KPI CARDS + 8 ANALYTICAL CHARTS)
     // ==========================================
     function DashboardModule({ orders, inventory, branches, selectedBranchId, menuItems }) {
       const totalRevenue = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + Number(o.total_amount), 0);
@@ -418,11 +418,59 @@
         const rev = orders.filter((o) => o.branch_id === b.id && o.status !== 'Cancelled').reduce((sum, o) => sum + Number(o.total_amount), 0);
         return { name: b.name.split('-')[1]?.trim() || b.name, revenue: rev };
       });
-
       const maxRevenue = Math.max(...branchRevenueData.map((d) => d.revenue), 1000);
+
+      // --- MOCK DASHBOARD CHART DATA ---
+      const orderTypeData = [
+        { label: 'Dine-In', count: orders.filter((o) => o.order_type === 'Dine-in').length || 14, color: 'bg-orange-500' },
+        { label: 'Takeaway', count: orders.filter((o) => o.order_type === 'Takeaway').length || 8, color: 'bg-amber-500' },
+        { label: 'Delivery', count: orders.filter((o) => o.order_type === 'Delivery').length || 5, color: 'bg-teal-500' }
+      ];
+      const maxOrderType = Math.max(...orderTypeData.map((d) => d.count));
+
+      const hourlySalesData = [
+        { hour: '12 PM', sales: 4500 }, { hour: '2 PM', sales: 8200 },
+        { hour: '4 PM', sales: 3100 }, { hour: '6 PM', sales: 9400 },
+        { hour: '8 PM', sales: 14500 }, { hour: '10 PM', sales: 11200 }
+      ];
+      const maxHourly = Math.max(...hourlySalesData.map((d) => d.sales));
+
+      const categorySalesData = [
+        { cat: 'Karahi & BBQ', percent: 45, color: 'bg-orange-500' },
+        { cat: 'Burgers & Wraps', percent: 25, color: 'bg-amber-500' },
+        { cat: 'Starters & Sides', percent: 18, color: 'bg-sky-500' },
+        { cat: 'Beverages & Desserts', percent: 12, color: 'bg-emerald-500' }
+      ];
+
+      const paymentMethodData = [
+        { type: 'Cash in Drawer', val: 62, color: 'bg-emerald-500' },
+        { type: 'Card POS Swipe', val: 28, color: 'bg-indigo-500' },
+        { type: 'Gift Cards & Vouchers', val: 10, color: 'bg-orange-500' }
+      ];
+
+      const weeklyTrend = [
+        { day: 'Mon', rev: 24000 }, { day: 'Tue', rev: 28500 },
+        { day: 'Wed', rev: 31000 }, { day: 'Thu', rev: 29000 },
+        { day: 'Fri', rev: 45000 }, { day: 'Sat', rev: 52000 }, { day: 'Sun', rev: 48000 }
+      ];
+      const maxWeekly = Math.max(...weeklyTrend.map((d) => d.rev));
+
+      const kdsSpeedData = [
+        { stage: '< 10 mins (Fast)', val: 70, color: 'bg-emerald-500' },
+        { stage: '10 - 20 mins (Normal)', val: 22, color: 'bg-amber-500' },
+        { stage: '> 20 mins (Delayed)', val: 8, color: 'bg-rose-500' }
+      ];
+
+      const inventoryHealthData = [
+        { name: 'Poultry / Meat', level: 85, color: 'bg-emerald-500' },
+        { name: 'Dairy & Ghee', level: 60, color: 'bg-amber-500' },
+        { name: 'Spices & Sauces', level: 35, color: 'bg-amber-600' },
+        { name: 'Packaging Boxes', level: 15, color: 'bg-rose-500' }
+      ];
 
       return (
         <div className="space-y-6">
+          {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div>
               <h2 className="text-xl font-extrabold text-slate-900">Zuraiz Special Executive Dashboard</h2>
@@ -437,6 +485,7 @@
             </div>
           </div>
 
+          {/* 8 KPI SUMMARY CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard title="Total Gross Revenue" value={`Rs. ${totalRevenue.toLocaleString()}`} subtext="Sales across active orders" icon={<Icon name="coins" className="w-5 h-5 text-orange-600" />} />
             <KpiCard title="Total Orders Count" value={totalOrders} subtext="All status orders processed" icon={<Icon name="clipboard-list" className="w-5 h-5 text-sky-600" />} />
@@ -448,66 +497,227 @@
             <KpiCard title="Active Branches" value={activeBranchesCount} subtext="Zuraiz Special locations" icon={<Icon name="building-2" className="w-5 h-5 text-orange-500" />} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
-              <div className="flex items-center justify-between mb-4">
+          {/* 8 ANALYTICAL VISUALIZER CHARTS */}
+          <div className="space-y-4 pt-2">
+            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <Icon name="pie-chart" className="w-5 h-5 text-orange-600" /> Executive Analytics & 8 Visual Charts
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              {/* CHART 1: BRANCH SALES REVENUE */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                    <Icon name="trending-up" className="w-4 h-4 text-orange-600" /> Branch Sales Revenue (PKR Rs.)
-                  </h3>
-                  <p className="text-xs text-slate-500">Live comparison across Zuraiz Special branches</p>
+                  <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5 mb-1">
+                    <Icon name="bar-chart-3" className="w-4 h-4 text-orange-600" /> 1. Branch Revenue (PKR)
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mb-4">Comparison across branches</p>
+                  <div className="h-36 flex items-end justify-around gap-2 pt-4 border-b border-slate-100">
+                    {branchRevenueData.map((b, idx) => (
+                      <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end">
+                        <div className="w-full bg-gradient-to-t from-orange-600 to-amber-500 rounded-t-lg" style={{ height: `${Math.max((b.revenue / maxRevenue) * 100, 10)}%` }}></div>
+                        <span className="text-[10px] text-slate-600 font-bold mt-2 truncate w-full text-center">{b.name.split(' ')[0]}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="h-56 flex items-end justify-around gap-6 pt-6 pb-2 border-b border-slate-100">
-                {branchRevenueData.map((b, idx) => {
-                  const heightPercent = Math.max((b.revenue / maxRevenue) * 100, 8);
-                  return (
-                    <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
-                      <div className="text-[11px] font-bold text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity mb-1">
-                        Rs. {b.revenue.toLocaleString()}
-                      </div>
-                      <div
-                        className="w-full max-w-[50px] bg-gradient-to-t from-orange-600 to-amber-500 rounded-t-xl transition-all duration-300 group-hover:brightness-110 shadow-md shadow-orange-500/20"
-                        style={{ height: `${heightPercent}%` }}
-                      ></div>
-                      <span className="text-xs text-slate-600 font-bold mt-3 truncate">{b.name}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-              <div>
-                <h3 className="font-bold text-sm text-slate-900 mb-4 flex items-center gap-2">
-                  <Icon name="refresh-cw" className="w-4 h-4 text-orange-600" /> Recent Order Activity
-                </h3>
-                {orders.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 text-xs">
-                    <Icon name="package-check" className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    No orders created yet in Zuraiz Special.
-                  </div>
-                ) : (
-                  <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
-                    {orders.slice(0, 5).map((ord) => (
-                      <div key={ord.id} className="flex items-start gap-3 text-xs border-b border-slate-100 pb-3 last:border-0">
-                        <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 font-bold shrink-0">#</div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-800">{ord.order_number}</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold">{ord.order_type}</span>
-                          </div>
-                          <p className="text-slate-500 text-[11px] mt-0.5">Total Rs. {ord.total_amount.toLocaleString()}  {ord.items.length} items</p>
+              {/* CHART 2: ORDER TYPES BREAKDOWN */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5 mb-1">
+                    <Icon name="pie-chart" className="w-4 h-4 text-amber-600" /> 2. Order Channel Types
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mb-4">Dine-in vs Takeaway vs Delivery</p>
+                  <div className="space-y-3 pt-2">
+                    {orderTypeData.map((ot, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between text-[11px] font-bold">
+                          <span className="text-slate-700">{ot.label}</span>
+                          <span className="text-orange-600">{ot.count} orders</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2">
+                          <div className={`${ot.color} h-2 rounded-full`} style={{ width: `${(ot.count / maxOrderType) * 100}%` }}></div>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
+                </div>
               </div>
+
+              {/* CHART 3: PEAK SALES HOURLY TIMELINE */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5 mb-1">
+                    <Icon name="clock" className="w-4 h-4 text-sky-600" /> 3. Peak Hourly Traffic
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mb-4">Sales curve across lunch/dinner</p>
+                  <div className="h-36 flex items-end justify-between gap-1 pt-4 border-b border-slate-100">
+                    {hourlySalesData.map((hs, idx) => (
+                      <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end">
+                        <div className="w-full bg-sky-500 rounded-t" style={{ height: `${(hs.sales / maxHourly) * 100}%` }}></div>
+                        <span className="text-[9px] text-slate-500 mt-2">{hs.hour}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* CHART 4: CATEGORY SHARE */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5 mb-1">
+                    <Icon name="layers" className="w-4 h-4 text-emerald-600" /> 4. Menu Category Share
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mb-4">Popularity % by food group</p>
+                  <div className="space-y-2.5">
+                    {categorySalesData.map((cat, idx) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="flex justify-between text-[10px] font-semibold text-slate-700">
+                          <span>{cat.cat}</span>
+                          <span className="font-bold text-slate-900">{cat.percent}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                          <div className={`${cat.color} h-full`} style={{ width: `${cat.percent}%` }}></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* CHART 5: PAYMENT METHODS */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5 mb-1">
+                    <Icon name="wallet" className="w-4 h-4 text-indigo-600" /> 5. Payment Methods
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mb-4">Cash vs Card vs Gift Cards</p>
+                  <div className="space-y-3">
+                    {paymentMethodData.map((pm, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between text-[11px] font-bold">
+                          <span className="text-slate-700">{pm.type}</span>
+                          <span className="text-indigo-600">{pm.val}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2">
+                          <div className={`${pm.color} h-2 rounded-full`} style={{ width: `${pm.val}%` }}></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* CHART 6: WEEKLY TRENDLINE */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5 mb-1">
+                    <Icon name="trending-up" className="w-4 h-4 text-emerald-600" /> 6. Weekly Revenue Trend
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mb-4">Day-by-day weekly growth</p>
+                  <div className="h-36 flex items-end justify-between gap-1 pt-4 border-b border-slate-100">
+                    {weeklyTrend.map((wt, idx) => (
+                      <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end">
+                        <div className="w-full bg-emerald-500 rounded-t-lg" style={{ height: `${(wt.rev / maxWeekly) * 100}%` }}></div>
+                        <span className="text-[9px] text-slate-500 mt-2 font-bold">{wt.day}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* CHART 7: KITCHEN PREP SPEED */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5 mb-1">
+                    <Icon name="timer" className="w-4 h-4 text-rose-600" /> 7. Kitchen Preparation Speed
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mb-4">Order fulfillment efficiency</p>
+                  <div className="space-y-3">
+                    {kdsSpeedData.map((ks, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-bold">
+                          <span className="text-slate-700">{ks.stage}</span>
+                          <span>{ks.val}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2">
+                          <div className={`${ks.color} h-2 rounded-full`} style={{ width: `${ks.val}%` }}></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* CHART 8: INVENTORY HEALTH */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5 mb-1">
+                    <Icon name="boxes" className="w-4 h-4 text-purple-600" /> 8. Stock Health Status
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mb-4">Key ingredient storage levels</p>
+                  <div className="space-y-3">
+                    {inventoryHealthData.map((ih, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-bold">
+                          <span className="text-slate-700">{ih.name}</span>
+                          <span>{ih.level}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2">
+                          <div className={`${ih.color} h-2 rounded-full`} style={{ width: `${ih.level}%` }}></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
+      );
+    }
+
+    function KpiCard({ title, value, subtext, icon }) {
+      return (
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-slate-500">{title}</span>
+            <h3 className="text-xl font-extrabold text-slate-900 mt-1">{value}</h3>
+            <p className="text-[10px] text-slate-400 mt-0.5">{subtext}</p>
+          </div>
+          <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">{icon}</div>
+        </div>
+      );
+    }
+
+    function NavItem({ icon, label, active, collapsed, onClick, badge, badgeColor }) {
+      return (
+        <button
+          onClick={onClick}
+          className={`w-full flex items-center justify-between p-3 rounded-xl transition font-medium text-xs ${
+            active
+              ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20 font-bold'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+          title={collapsed ? label : undefined}
+        >
+          <div className="flex items-center gap-3">
+            {icon}
+            {!collapsed && <span>{label}</span>}
+          </div>
+          {!collapsed && badge && (
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full ${
+                badgeColor || (active ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-700 font-bold')
+              }`}
+            >
+              {badge}
+            </span>
+          )}
+        </button>
       );
     }
 

@@ -320,7 +320,7 @@
                   >
                     {users.map((u) => (
                       <option key={u.id} value={u.id} className="bg-white text-slate-900">
-                        {u.name} — {u.role}
+                        {u.name} Â— {u.role}
                       </option>
                     ))}
                   </select>
@@ -498,7 +498,7 @@
                             <span className="font-bold text-slate-800">{ord.order_number}</span>
                             <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold">{ord.order_type}</span>
                           </div>
-                          <p className="text-slate-500 text-[11px] mt-0.5">Total Rs. {ord.total_amount.toLocaleString()} • {ord.items.length} items</p>
+                          <p className="text-slate-500 text-[11px] mt-0.5">Total Rs. {ord.total_amount.toLocaleString()} Â• {ord.items.length} items</p>
                         </div>
                       </div>
                     ))}

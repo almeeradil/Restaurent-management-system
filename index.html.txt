@@ -1,0 +1,1939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Zuraiz Special - Multi-Branch Restaurant Management System</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & React DOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel Compiler for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Custom Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased overflow-hidden">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
+
+    // --- CLEAN INITIAL DATA FOR ZURAIZ SPECIAL ---
+    const INITIAL_BRANCHES = [
+      { id: 'b1', name: 'Zuraiz Special - Gulberg Main', address: 'Main Boulevard, Gulberg III, Lahore', phone: '+92 42 111-987-654', status: 'Active' },
+      { id: 'b2', name: 'Zuraiz Special - DHA Phase 5', address: 'Phase 5 Commercial Area, DHA, Lahore', phone: '+92 42 111-987-655', status: 'Active' },
+      { id: 'b3', name: 'Zuraiz Special - Johar Town', address: 'Emporium Mall Road, Johar Town, Lahore', phone: '+92 42 111-987-656', status: 'Active' }
+    ];
+
+    const INITIAL_USERS = [
+      { id: 'u1', name: 'Zuraiz Owner', role: 'Super Admin', branch_id: 'all', email: 'owner@zuraizspecial.com', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80', phone: '+92 300 1234567', status: 'Active', hourly_rate: 1200 },
+      { id: 'u2', name: 'Manager Gulberg', role: 'Branch Manager', branch_id: 'b1', email: 'gulberg@zuraizspecial.com', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80', phone: '+92 301 2345678', status: 'Active', hourly_rate: 800 },
+      { id: 'u3', name: 'Cashier Main', role: 'Cashier', branch_id: 'b1', email: 'cashier@zuraizspecial.com', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80', phone: '+92 302 3456789', status: 'Active', hourly_rate: 500 }
+    ];
+
+    const INITIAL_CUSTOMERS = [
+      { id: 'c1', name: 'Ali Khan', phone: '+92 300 9876543', email: 'ali.khan@example.com', points: 450, totalSpent: 18500, visits: 12, favorite: 'Special Zuraiz Burger', rating: 5, feedback: 'Best burger in Gulberg!' },
+      { id: 'c2', name: 'Sara Ahmed', phone: '+92 321 8765432', email: 'sara.a@example.com', points: 820, totalSpent: 34200, visits: 22, favorite: 'Mutton Karahi', rating: 5, feedback: 'Always fresh and hot food.' }
+    ];
+
+    const INITIAL_GIFT_CARDS = [
+      { id: 'gc1', code: 'ZURAIZ-GIFT-1000', balance: 1000, initialValue: 1000, customer: 'Ali Khan', status: 'Active' },
+      { id: 'gc2', code: 'ZURAIZ-GIFT-5000', balance: 3500, initialValue: 5000, customer: 'Sara Ahmed', status: 'Active' }
+    ];
+
+    const INITIAL_PROMOS = [
+      { id: 'pr1', code: 'PROMO10', discountType: 'percentage', value: 10, usageCount: 45, status: 'Active' },
+      { id: 'pr2', code: 'ZURAIZ500', discountType: 'flat', value: 500, usageCount: 18, status: 'Active' }
+    ];
+
+    const INITIAL_RESERVATIONS = [
+      { id: 'r1', guestName: 'Usman Chaudhry', phone: '+92 333 1122334', guests: 4, date: '2026-11-09', time: '20:00', branchId: 'b1', table: 'T-04', status: 'Confirmed', notes: 'Anniversary Dinner' },
+      { id: 'r2', guestName: 'Hamza Malik', phone: '+92 345 5566778', guests: 2, date: '2026-11-09', time: '21:30', branchId: 'b1', table: 'Waitlist #1', status: 'Waitlist', notes: 'Prefers window seat' }
+    ];
+
+    const INITIAL_SHIFTS = [
+      { id: 's1', userId: 'u2', userName: 'Manager Gulberg', role: 'Branch Manager', date: '2026-11-09', startTime: '09:00', endTime: '17:00', branchId: 'b1', status: 'Scheduled' },
+      { id: 's2', userId: 'u3', userName: 'Cashier Main', role: 'Cashier', date: '2026-11-09', startTime: '12:00', endTime: '20:00', branchId: 'b1', status: 'Scheduled' }
+    ];
+
+    const INITIAL_ATTENDANCE = [
+      { id: 'a1', userId: 'u3', userName: 'Cashier Main', clockIn: '08:55 AM', clockOut: '05:02 PM', totalHours: 8.1, date: '2026-11-08' }
+    ];
+
+    const INITIAL_RECIPES = [
+      { id: 'rc1', menuName: 'Special Zuraiz Karahi', cogs: 850, sellingPrice: 1800, ingredients: [{ name: 'Chicken/Mutton', qty: '1 kg', cost: 650 }, { name: 'Desi Ghee & Spices', qty: '200g', cost: 200 }] }
+    ];
+
+    const INITIAL_VOID_LOGS = [
+      { id: 'v1', orderNumber: '#1024', item: 'Cold Drink', amount: 150, reason: 'Customer changed mind', voidedBy: 'Manager Gulberg', date: '2026-11-08 14:30' }
+    ];
+
+    const INITIAL_WASTE_LOGS = [
+      { id: 'w1', ingredient: 'Fresh Tomatoes', qty: '3 kg', cost: 450, reason: 'Spoiled during storage', branchId: 'b1', date: '2026-11-08' }
+    ];
+
+    const INITIAL_MENU = [];
+    const INITIAL_ORDERS = [];
+    const INITIAL_INVENTORY = [];
+
+    // Icon helper component for rendering lucide icons dynamically in browser environment
+    function Icon({ name, className = "w-5 h-5", ...props }) {
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      }, [name]);
+      return <i data-lucide={name} className={className} {...props}></i>;
+    }
+
+    function App() {
+      // --- GLOBAL STATE ---
+      const [branches, setBranches] = useState(INITIAL_BRANCHES);
+      const [selectedBranchId, setSelectedBranchId] = useState('all');
+      const [users, setUsers] = useState(INITIAL_USERS);
+      const [currentUser, setCurrentUser] = useState(INITIAL_USERS[0]);
+      const [menuItems, setMenuItems] = useState(INITIAL_MENU);
+      const [orders, setOrders] = useState(INITIAL_ORDERS);
+      const [inventory, setInventory] = useState(INITIAL_INVENTORY);
+      const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+      const [giftCards, setGiftCards] = useState(INITIAL_GIFT_CARDS);
+      const [promos, setPromos] = useState(INITIAL_PROMOS);
+      const [reservations, setReservations] = useState(INITIAL_RESERVATIONS);
+      const [shifts, setShifts] = useState(INITIAL_SHIFTS);
+      const [attendance, setAttendance] = useState(INITIAL_ATTENDANCE);
+      const [recipes, setRecipes] = useState(INITIAL_RECIPES);
+      const [voidLogs, setVoidLogs] = useState(INITIAL_VOID_LOGS);
+      const [wasteLogs, setWasteLogs] = useState(INITIAL_WASTE_LOGS);
+      
+      // Cash Register State
+      const [registerState, setRegisterState] = useState({ isOpen: true, openingBalance: 10000, cashDrops: [], currentCash: 10000 });
+      const [showZReportModal, setShowZReportModal] = useState(false);
+
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+      const [toasts, setToasts] = useState([]);
+      const [notifications, setNotifications] = useState([
+        { id: 1, title: 'Zuraiz Special System Online', msg: 'All PKR (Rs.) reporting and multi-branch tools ready!', time: 'Just now', unread: true }
+      ]);
+      const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+
+      // Modals state
+      const [receiptModalOrder, setReceiptModalOrder] = useState(null);
+
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      });
+
+      // Toast Notification Helper
+      const showToast = (message, type = 'success') => {
+        const id = Date.now();
+        setToasts((prev) => [...prev, { id, message, type }]);
+        setTimeout(() => {
+          setToasts((prev) => prev.filter((t) => t.id !== id));
+        }, 3500);
+      };
+
+      // Branch Selector Filter helper
+      const filteredOrders = useMemo(() => {
+        if (selectedBranchId === 'all') return orders;
+        return orders.filter((o) => o.branch_id === selectedBranchId);
+      }, [orders, selectedBranchId]);
+
+      const filteredInventory = useMemo(() => {
+        if (selectedBranchId === 'all') return inventory;
+        return inventory.filter((i) => i.branch_id === selectedBranchId);
+      }, [inventory, selectedBranchId]);
+
+      const filteredMenu = useMemo(() => {
+        if (selectedBranchId === 'all') return menuItems;
+        return menuItems.filter((m) => m.availability && m.availability.includes(selectedBranchId));
+      }, [menuItems, selectedBranchId]);
+
+      const markNotificationsRead = () => {
+        setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+      };
+
+      return (
+        <div className="flex h-screen bg-slate-100 text-slate-800 font-sans overflow-hidden">
+          {/* --- TOAST CONTAINER --- */}
+          <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
+            {toasts.map((toast) => (
+              <div
+                key={toast.id}
+                className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border transition-all duration-300 ${
+                  toast.type === 'error'
+                    ? 'bg-rose-50 text-rose-800 border-rose-200'
+                    : toast.type === 'warning'
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-orange-50 text-orange-900 border-orange-200'
+                }`}
+              >
+                <Icon name={toast.type === 'error' ? 'alert-triangle' : toast.type === 'warning' ? 'alert-circle' : 'check-circle-2'} className="w-5 h-5 text-orange-600" />
+                <span className="text-sm font-semibold">{toast.message}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* --- SIDEBAR --- */}
+          <aside
+            className={`${
+              sidebarCollapsed ? 'w-20' : 'w-64'
+            } bg-white border-r border-slate-200 flex flex-col justify-between transition-all duration-300 z-30 relative shadow-sm`}
+          >
+            <div className="flex flex-col h-full overflow-hidden">
+              {/* Logo Branding */}
+              <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 shrink-0">
+                {!sidebarCollapsed && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                      <Icon name="utensils-crossed" className="w-5 h-5 text-white stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <h1 className="font-extrabold text-base text-slate-900 leading-none">
+                        Zuraiz Special
+                      </h1>
+                      <span className="text-[10px] uppercase tracking-wider text-orange-600 font-bold">
+                        Enterprise PKR POS
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {sidebarCollapsed && (
+                  <div className="mx-auto w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                    <Icon name="utensils-crossed" className="w-5 h-5 text-white stroke-[2.5]" />
+                  </div>
+                )}
+                <button
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
+                  title="Toggle Sidebar"
+                >
+                  <Icon name="menu" className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Navigation Links - Scrollable */}
+              <nav className="p-3 space-y-1 overflow-y-auto flex-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1">Core Operations</div>
+                <NavItem icon={<Icon name="layout-dashboard" className="w-4 h-4" />} label="Dashboard Overview" active={activeTab === 'dashboard'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('dashboard')} />
+                <NavItem icon={<Icon name="shopping-bag" className="w-4 h-4" />} label="POS / Order Counter" active={activeTab === 'pos'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('pos')} badge="Live" />
+                <NavItem icon={<Icon name="utensils-crossed" className="w-4 h-4" />} label="Kitchen Display (KDS)" active={activeTab === 'kds'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('kds')} badge={orders.filter((o) => o.status !== 'Completed' && o.status !== 'Cancelled').length} badgeColor="bg-amber-100 text-amber-700 font-bold" />
+                <NavItem icon={<Icon name="clipboard-list" className="w-4 h-4" />} label="Order History & List" active={activeTab === 'orders'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('orders')} />
+                <NavItem icon={<Icon name="cash-register" className="w-4 h-4" />} label="Cash Register & Shift Z-Report" active={activeTab === 'register'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('register')} />
+
+                <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1 pt-2">Financials & Costs</div>
+                <NavItem icon={<Icon name="line-chart" className="w-4 h-4" />} label="Sales & Financial Reports" active={activeTab === 'reports'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('reports')} />
+                <NavItem icon={<Icon name="pie-chart" className="w-4 h-4" />} label="Labor & Prime Cost Report" active={activeTab === 'labor_report'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('labor_report')} />
+                <NavItem icon={<Icon name="chef-hat" className="w-4 h-4" />} label="Recipe & Food Costing" active={activeTab === 'recipes'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('recipes')} />
+
+                <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1 pt-2">Customer & Growth</div>
+                <NavItem icon={<Icon name="gift" className="w-4 h-4" />} label="Loyalty, Promos & Gift Cards" active={activeTab === 'loyalty'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('loyalty')} />
+                <NavItem icon={<Icon name="users" className="w-4 h-4" />} label="Customer Directory & Reviews" active={activeTab === 'customers'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('customers')} />
+                <NavItem icon={<Icon name="calendar-days" className="w-4 h-4" />} label="Reservations & Waitlist" active={activeTab === 'reservations'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('reservations')} badge={reservations.length} />
+
+                <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1 pt-2">Staff & Management</div>
+                <NavItem icon={<Icon name="user-cog" className="w-4 h-4" />} label="Staff Directory & Roles" active={activeTab === 'staff'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('staff')} />
+                <NavItem icon={<Icon name="clock" className="w-4 h-4" />} label="Scheduling & Attendance" active={activeTab === 'scheduling'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('scheduling')} />
+                <NavItem icon={<Icon name="wallet" className="w-4 h-4" />} label="Payroll & Tip Pooling" active={activeTab === 'payroll'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('payroll')} />
+                <NavItem icon={<Icon name="book-open" className="w-4 h-4" />} label="Menu Management" active={activeTab === 'menu'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('menu')} badge={menuItems.length} />
+                <NavItem icon={<Icon name="boxes" className="w-4 h-4" />} label="Inventory & Stock Control" active={activeTab === 'inventory'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('inventory')} badge={inventory.filter((i) => i.quantity <= i.reorder_level).length} badgeColor="bg-rose-100 text-rose-700 font-bold" />
+                <NavItem icon={<Icon name="building-2" className="w-4 h-4" />} label="Branch Management" active={activeTab === 'branches'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('branches')} />
+              </nav>
+
+              {/* User Role Quick Switcher Footer */}
+              <div className="p-3 border-t border-slate-200 shrink-0">
+                {!sidebarCollapsed ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-full object-cover border-2 border-orange-500" />
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-bold text-slate-800 truncate">{currentUser.name}</p>
+                        <p className="text-[10px] text-orange-600 font-bold truncate">{currentUser.role}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-center">
+                    <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-full object-cover border-2 border-orange-500" title={`${currentUser.name} (${currentUser.role})`} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+
+          {/* --- MAIN CONTENT CONTAINER --- */}
+          <div className="flex-1 flex flex-col h-screen overflow-hidden">
+            {/* --- HEADER NAVBAR --- */}
+            <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shadow-sm shrink-0">
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-bold text-slate-900 capitalize">
+                  {activeTab.replace('_', ' ')}
+                </h2>
+                <div className="h-4 w-px bg-slate-300"></div>
+
+                {/* Global Branch Selector Dropdown */}
+                <div className="relative">
+                  <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 text-xs text-slate-700 px-3 py-1.5 rounded-lg hover:border-orange-500/50 transition cursor-pointer">
+                    <Icon name="building-2" className="w-3.5 h-3.5 text-orange-500" />
+                    <span className="font-medium text-slate-500">Branch Context:</span>
+                    <select
+                      value={selectedBranchId}
+                      onChange={(e) => setSelectedBranchId(e.target.value)}
+                      className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer pr-2"
+                    >
+                      <option value="all" className="bg-white text-slate-900">?? All Branches (Aggregated PKR)</option>
+                      {branches.map((b) => (
+                        <option key={b.id} value={b.id} className="bg-white text-slate-900">?? {b.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="hidden lg:flex items-center gap-2 text-xs bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg">
+                  <span className="text-slate-500">Active User Role:</span>
+                  <select
+                    value={currentUser.id}
+                    onChange={(e) => {
+                      const found = users.find((u) => u.id === e.target.value);
+                      if (found) {
+                        setCurrentUser(found);
+                        showToast(`Switched user context to ${found.name} (${found.role})`, 'info');
+                      }
+                    }}
+                    className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
+                  >
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id} className="bg-white text-slate-900">
+                        {u.name} — {u.role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                    className="relative p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                  >
+                    <Icon name="bell" className="w-5 h-5" />
+                    {notifications.some((n) => n.unread) && (
+                      <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-orange-500 rounded-full ring-2 ring-white animate-pulse"></span>
+                    )}
+                  </button>
+
+                  {showNotifDropdown && (
+                    <div className="absolute right-0 mt-3 w-80 bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 z-50">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <h4 className="font-bold text-sm text-slate-900">Notifications</h4>
+                        <button onClick={markNotificationsRead} className="text-[11px] text-orange-600 hover:underline font-bold">
+                          Mark all read
+                        </button>
+                      </div>
+                      <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto my-2">
+                        {notifications.map((n) => (
+                          <div key={n.id} className="py-2.5 px-1 flex flex-col gap-0.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-800">{n.title}</span>
+                              <span className="text-[10px] text-slate-400">{n.time}</span>
+                            </div>
+                            <p className="text-xs text-slate-500">{n.msg}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            {/* --- DYNAMIC MODULE CONTENT BODY --- */}
+            <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
+              {activeTab === 'dashboard' && <DashboardModule orders={filteredOrders} inventory={filteredInventory} branches={branches} selectedBranchId={selectedBranchId} menuItems={menuItems} />}
+              {activeTab === 'pos' && <POSModule menuItems={filteredMenu} selectedBranchId={selectedBranchId} branches={branches} orders={orders} setOrders={setOrders} showToast={showToast} setReceiptModalOrder={setReceiptModalOrder} promos={promos} giftCards={giftCards} />}
+              {activeTab === 'kds' && <KDSModule orders={filteredOrders} setOrders={setOrders} showToast={showToast} branches={branches} />}
+              {activeTab === 'orders' && <OrderManagementModule orders={filteredOrders} setOrders={setOrders} branches={branches} menuItems={menuItems} setReceiptModalOrder={setReceiptModalOrder} showToast={showToast} selectedBranchId={selectedBranchId} voidLogs={voidLogs} setVoidLogs={setVoidLogs} currentUser={currentUser} />}
+              {activeTab === 'register' && <CashRegisterModule registerState={registerState} setRegisterState={setRegisterState} orders={filteredOrders} showToast={showToast} setShowZReportModal={setShowZReportModal} />}
+              {activeTab === 'reports' && <SalesReportsModule orders={filteredOrders} voidLogs={voidLogs} branches={branches} />}
+              {activeTab === 'labor_report' && <LaborReportModule orders={filteredOrders} attendance={attendance} wasteLogs={wasteLogs} setWasteLogs={setWasteLogs} branches={branches} showToast={showToast} />}
+              {activeTab === 'recipes' && <RecipesModule recipes={recipes} setRecipes={setRecipes} menuItems={menuItems} showToast={showToast} />}
+              {activeTab === 'loyalty' && <LoyaltyModule customers={customers} setCustomers={setCustomers} giftCards={giftCards} setGiftCards={setGiftCards} promos={promos} setPromos={setPromos} showToast={showToast} />}
+              {activeTab === 'customers' && <CustomerDirectoryModule customers={customers} setCustomers={setCustomers} showToast={showToast} />}
+              {activeTab === 'reservations' && <ReservationsModule reservations={reservations} setReservations={setReservations} branches={branches} showToast={showToast} />}
+              {activeTab === 'staff' && <StaffDirectoryModule users={users} setUsers={setUsers} branches={branches} showToast={showToast} />}
+              {activeTab === 'scheduling' && <SchedulingModule shifts={shifts} setShifts={setShifts} attendance={attendance} setAttendance={setAttendance} users={users} branches={branches} showToast={showToast} />}
+              {activeTab === 'payroll' && <PayrollModule users={users} attendance={attendance} showToast={showToast} />}
+              {activeTab === 'menu' && <MenuManagementModule menuItems={menuItems} setMenuItems={setMenuItems} branches={branches} showToast={showToast} />}
+              {activeTab === 'inventory' && <InventoryModule inventory={filteredInventory} setInventory={setInventory} branches={branches} selectedBranchId={selectedBranchId} showToast={showToast} />}
+              {activeTab === 'branches' && <BranchManagementModule branches={branches} setBranches={setBranches} users={users} setUsers={setUsers} showToast={showToast} />}
+            </main>
+          </div>
+
+          {/* --- PRINT RECEIPT MODAL --- */}
+          {receiptModalOrder && (
+            <ReceiptModal
+              order={receiptModalOrder}
+              branch={branches.find((b) => b.id === receiptModalOrder.branch_id)}
+              onClose={() => setReceiptModalOrder(null)}
+            />
+          )}
+
+          {/* --- Z-REPORT MODAL --- */}
+          {showZReportModal && (
+            <ZReportModal registerState={registerState} orders={filteredOrders} onClose={() => setShowZReportModal(false)} />
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: DASHBOARD OVERVIEW (PKR CURRENCY)
+    // ==========================================
+    function DashboardModule({ orders, inventory, branches, selectedBranchId, menuItems }) {
+      const totalRevenue = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + Number(o.total_amount), 0);
+      const totalOrders = orders.length;
+      const activeDineIn = orders.filter((o) => o.order_type === 'Dine-in' && o.status !== 'Completed' && o.status !== 'Cancelled').length;
+      const takeawayOrders = orders.filter((o) => o.order_type === 'Takeaway').length;
+      const deliveryOrders = orders.filter((o) => o.order_type === 'Delivery').length;
+      const totalMenuItemsCount = menuItems.length;
+      const lowStockCount = inventory.filter((i) => i.quantity <= i.reorder_level).length;
+      const activeBranchesCount = branches.filter((b) => b.status === 'Active').length;
+
+      const branchRevenueData = branches.map((b) => {
+        const rev = orders.filter((o) => o.branch_id === b.id && o.status !== 'Cancelled').reduce((sum, o) => sum + Number(o.total_amount), 0);
+        return { name: b.name.split('-')[1]?.trim() || b.name, revenue: rev };
+      });
+
+      const maxRevenue = Math.max(...branchRevenueData.map((d) => d.revenue), 1000);
+
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-900">Zuraiz Special Executive Dashboard</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Real-time multi-branch financial metrics in <span className="text-orange-600 font-bold">Pakistani Rupees (Rs.)</span>
+              </p>
+            </div>
+            <div className="mt-4 sm:mt-0 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Zuraiz Special PKR Live
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard title="Total Gross Revenue" value={`Rs. ${totalRevenue.toLocaleString()}`} subtext="Sales across active orders" icon={<Icon name="coins" className="w-5 h-5 text-orange-600" />} />
+            <KpiCard title="Total Orders Count" value={totalOrders} subtext="All status orders processed" icon={<Icon name="clipboard-list" className="w-5 h-5 text-sky-600" />} />
+            <KpiCard title="Active Dine-in Tables" value={activeDineIn} subtext="Tables currently occupied" icon={<Icon name="utensils" className="w-5 h-5 text-amber-600" />} />
+            <KpiCard title="Takeaway Orders" value={takeawayOrders} subtext="Pickup orders count" icon={<Icon name="shopping-bag" className="w-5 h-5 text-indigo-600" />} />
+            <KpiCard title="Delivery Orders" value={deliveryOrders} subtext="Home delivery dispatch" icon={<Icon name="bike" className="w-5 h-5 text-teal-600" />} />
+            <KpiCard title="Total Menu Items" value={totalMenuItemsCount} subtext="Active food & drink dishes" icon={<Icon name="book-open" className="w-5 h-5 text-purple-600" />} />
+            <KpiCard title="Low Stock Alerts" value={lowStockCount} subtext="Ingredients below reorder level" icon={<Icon name="alert-triangle" className="w-5 h-5 text-rose-600" />} />
+            <KpiCard title="Active Branches" value={activeBranchesCount} subtext="Zuraiz Special locations" icon={<Icon name="building-2" className="w-5 h-5 text-orange-500" />} />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <Icon name="trending-up" className="w-4 h-4 text-orange-600" /> Branch Sales Revenue (PKR Rs.)
+                  </h3>
+                  <p className="text-xs text-slate-500">Live comparison across Zuraiz Special branches</p>
+                </div>
+              </div>
+
+              <div className="h-56 flex items-end justify-around gap-6 pt-6 pb-2 border-b border-slate-100">
+                {branchRevenueData.map((b, idx) => {
+                  const heightPercent = Math.max((b.revenue / maxRevenue) * 100, 8);
+                  return (
+                    <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
+                      <div className="text-[11px] font-bold text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity mb-1">
+                        Rs. {b.revenue.toLocaleString()}
+                      </div>
+                      <div
+                        className="w-full max-w-[50px] bg-gradient-to-t from-orange-600 to-amber-500 rounded-t-xl transition-all duration-300 group-hover:brightness-110 shadow-md shadow-orange-500/20"
+                        style={{ height: `${heightPercent}%` }}
+                      ></div>
+                      <span className="text-xs text-slate-600 font-bold mt-3 truncate">{b.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 mb-4 flex items-center gap-2">
+                  <Icon name="refresh-cw" className="w-4 h-4 text-orange-600" /> Recent Order Activity
+                </h3>
+                {orders.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400 text-xs">
+                    <Icon name="package-check" className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    No orders created yet in Zuraiz Special.
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
+                    {orders.slice(0, 5).map((ord) => (
+                      <div key={ord.id} className="flex items-start gap-3 text-xs border-b border-slate-100 pb-3 last:border-0">
+                        <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 font-bold shrink-0">#</div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800">{ord.order_number}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold">{ord.order_type}</span>
+                          </div>
+                          <p className="text-slate-500 text-[11px] mt-0.5">Total Rs. {ord.total_amount.toLocaleString()} • {ord.items.length} items</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: SALES & FINANCIAL REPORTS (GST Breakdown)
+    // ==========================================
+    function SalesReportsModule({ orders, voidLogs, branches }) {
+      const activeOrders = orders.filter((o) => o.status !== 'Cancelled');
+      const grossSales = activeOrders.reduce((sum, o) => sum + o.total_amount, 0);
+      const totalGST = grossSales * 0.16; // 16% GST in Pakistan
+      const cgst = totalGST / 2;
+      const sgst = totalGST / 2;
+      const netSales = grossSales - totalGST;
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Sales & Financial Reporting</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Daily, weekly, and monthly sales summaries & official GST tax logs</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+                <span className="text-xs font-semibold text-slate-500">Gross Sales</span>
+                <h3 className="text-xl font-extrabold text-slate-900 mt-1">Rs. {grossSales.toLocaleString()}</h3>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+                <span className="text-xs font-semibold text-slate-500">Net Revenue (Excl Tax)</span>
+                <h3 className="text-xl font-extrabold text-slate-900 mt-1">Rs. {netSales.toLocaleString(undefined, {maximumFractionDigits: 0})}</h3>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl">
+                <span className="text-xs font-bold text-amber-800">Total GST Tax (16%)</span>
+                <h3 className="text-xl font-extrabold text-amber-900 mt-1">Rs. {totalGST.toLocaleString(undefined, {maximumFractionDigits: 0})}</h3>
+                <p className="text-[10px] text-amber-700 mt-1">CGST: Rs. {cgst.toFixed(0)} | SGST: Rs. {sgst.toFixed(0)}</p>
+              </div>
+              <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl">
+                <span className="text-xs font-bold text-rose-800">Void & Refunded Logs</span>
+                <h3 className="text-xl font-extrabold text-rose-900 mt-1">{voidLogs.length} Voids</h3>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <Icon name="ban" className="w-4 h-4 text-rose-600" /> Void & Refund Audit Log
+            </h3>
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                <tr>
+                  <th className="p-3">Order Ref</th>
+                  <th className="p-3">Item Voided</th>
+                  <th className="p-3">Amount</th>
+                  <th className="p-3">Reason</th>
+                  <th className="p-3">Authorized By</th>
+                  <th className="p-3">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {voidLogs.length === 0 ? (
+                  <tr><td colSpan="6" className="p-4 text-center text-slate-400">No voids or refunds recorded.</td></tr>
+                ) : (
+                  voidLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50">
+                      <td className="p-3 font-bold text-orange-600">{log.orderNumber}</td>
+                      <td className="p-3 font-semibold text-slate-800">{log.item}</td>
+                      <td className="p-3 font-bold text-slate-900">Rs. {log.amount}</td>
+                      <td className="p-3 text-slate-600">{log.reason}</td>
+                      <td className="p-3 font-medium text-slate-700">{log.voidedBy}</td>
+                      <td className="p-3 text-slate-400">{log.date}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: LABOR & PRIME COST REPORT
+    // ==========================================
+    function LaborReportModule({ orders, attendance, wasteLogs, setWasteLogs, branches, showToast }) {
+      const [wasteForm, setWasteForm] = useState({ ingredient: '', qty: '', cost: '', reason: '' });
+      const grossSales = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + o.total_amount, 0);
+      const totalLaborHours = attendance.reduce((sum, a) => sum + a.totalHours, 0);
+      const estimatedLaborCost = totalLaborHours * 750; // Average Rs. 750 / hr
+      const totalWasteCost = wasteLogs.reduce((sum, w) => sum + Number(w.cost), 0);
+      const estimatedCOGS = grossSales * 0.32; // Estimated 32% food cost
+      const primeCost = estimatedCOGS + estimatedLaborCost;
+
+      const laborPercent = grossSales > 0 ? ((estimatedLaborCost / grossSales) * 100).toFixed(1) : 0;
+      const primeCostPercent = grossSales > 0 ? ((primeCost / grossSales) * 100).toFixed(1) : 0;
+
+      const handleAddWaste = (e) => {
+        e.preventDefault();
+        if (!wasteForm.ingredient || !wasteForm.cost) return;
+        const newWaste = { id: `w-${Date.now()}`, ...wasteForm, cost: Number(wasteForm.cost), date: new Date().toISOString().split('T')[0] };
+        setWasteLogs([newWaste, ...wasteLogs]);
+        setWasteForm({ ingredient: '', qty: '', cost: '', reason: '' });
+        showToast('Food waste logged!', 'warning');
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Labor Cost % against Sales</span>
+              <h3 className="text-2xl font-extrabold text-orange-600 mt-1">{laborPercent}%</h3>
+              <p className="text-[11px] text-slate-400 mt-1">Est. Labor Cost: Rs. {estimatedLaborCost.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Prime Cost (COGS + Labor)</span>
+              <h3 className="text-2xl font-extrabold text-slate-900 mt-1">Rs. {primeCost.toLocaleString(undefined, {maximumFractionDigits: 0})}</h3>
+              <p className="text-[11px] text-orange-600 font-bold mt-1">{primeCostPercent}% of Gross Revenue</p>
+            </div>
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Recorded Food Waste Cost</span>
+              <h3 className="text-2xl font-extrabold text-rose-600 mt-1">Rs. {totalWasteCost.toLocaleString()}</h3>
+              <p className="text-[11px] text-slate-400 mt-1">{wasteLogs.length} logged waste entries</p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <Icon name="trash-2" className="w-4 h-4 text-rose-600" /> Log Food Waste & Inventory Loss
+            </h3>
+            <form onSubmit={handleAddWaste} className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+              <input type="text" placeholder="Ingredient name..." value={wasteForm.ingredient} onChange={(e) => setWasteForm({...wasteForm, ingredient: e.target.value})} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5" />
+              <input type="text" placeholder="Qty (e.g. 2 kg)..." value={wasteForm.qty} onChange={(e) => setWasteForm({...wasteForm, qty: e.target.value})} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5" />
+              <input type="number" placeholder="Cost (Rs.)..." value={wasteForm.cost} onChange={(e) => setWasteForm({...wasteForm, cost: e.target.value})} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5" />
+              <input type="text" placeholder="Reason (Expired/Burnt)..." value={wasteForm.reason} onChange={(e) => setWasteForm({...wasteForm, reason: e.target.value})} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5" />
+              <button type="submit" className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl py-2.5">Log Waste</button>
+            </form>
+
+            <table className="w-full text-left text-xs text-slate-700 mt-4">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                <tr>
+                  <th className="p-3">Ingredient</th>
+                  <th className="p-3">Quantity</th>
+                  <th className="p-3">Waste Cost (Rs.)</th>
+                  <th className="p-3">Reason</th>
+                  <th className="p-3">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {wasteLogs.map((w) => (
+                  <tr key={w.id}>
+                    <td className="p-3 font-bold text-slate-800">{w.ingredient}</td>
+                    <td className="p-3">{w.qty}</td>
+                    <td className="p-3 font-bold text-rose-600">Rs. {w.cost}</td>
+                    <td className="p-3 text-slate-500">{w.reason}</td>
+                    <td className="p-3 text-slate-400">{w.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: CASH REGISTER & Z-REPORT MODAL
+    // ==========================================
+    function CashRegisterModule({ registerState, setRegisterState, orders, showToast, setShowZReportModal }) {
+      const [cashDropAmt, setCashDropAmt] = useState('');
+
+      const handleCashDrop = () => {
+        if (!cashDropAmt || Number(cashDropAmt) <= 0) return;
+        setRegisterState((prev) => ({
+          ...prev,
+          cashDrops: [...prev.cashDrops, { id: Date.now(), amount: Number(cashDropAmt), time: new Date().toLocaleTimeString() }],
+          currentCash: prev.currentCash - Number(cashDropAmt)
+        }));
+        showToast(`Cash drop of Rs. ${cashDropAmt} recorded!`, 'success');
+        setCashDropAmt('');
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Cash Register & Shift Control</h2>
+              <p className="text-xs text-slate-500">Manage float balance, record cash drops, and produce official End-of-Shift Z-Reports</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowZReportModal(true)} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-orange-500/20">
+                <Icon name="file-text" className="w-4 h-4" /> Print End-of-Shift Z-Report
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Opening Cash Float</span>
+              <h3 className="text-2xl font-extrabold text-slate-900 mt-1">Rs. {registerState.openingBalance.toLocaleString()}</h3>
+            </div>
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Current Cash in Drawer</span>
+              <h3 className="text-2xl font-extrabold text-emerald-600 mt-1">Rs. {registerState.currentCash.toLocaleString()}</h3>
+            </div>
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Total Cash Drops Executed</span>
+              <h3 className="text-2xl font-extrabold text-amber-600 mt-1">{registerState.cashDrops.length} Drops</h3>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-sm text-slate-900">Perform Safe Cash Drop</h3>
+            <div className="flex gap-3">
+              <input type="number" placeholder="Drop Amount in Rs...." value={cashDropAmt} onChange={(e) => setCashDropAmt(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold w-64" />
+              <button onClick={handleCashDrop} className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs">Execute Drop</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ZReportModal({ registerState, orders, onClose }) {
+      const activeOrders = orders.filter((o) => o.status !== 'Cancelled');
+      const grossSales = activeOrders.reduce((sum, o) => sum + o.total_amount, 0);
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div className="text-center border-b border-dashed border-slate-300 pb-3">
+              <h2 className="font-extrabold text-lg text-slate-900">ZURAIZ SPECIAL Z-REPORT</h2>
+              <p className="text-[10px] text-slate-500">Official End-of-Shift Terminal Audit</p>
+              <p className="text-[10px] text-slate-400 mt-1">{new Date().toLocaleString()}</p>
+            </div>
+
+            <div className="text-xs space-y-2 text-slate-700">
+              <div className="flex justify-between"><span>Opening Cash Float:</span><span className="font-bold">Rs. {registerState.openingBalance}</span></div>
+              <div className="flex justify-between"><span>Gross Shift Sales:</span><span className="font-bold text-orange-600">Rs. {grossSales.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>Total Orders Processed:</span><span className="font-bold">{activeOrders.length}</span></div>
+              <div className="flex justify-between border-t border-dashed border-slate-200 pt-2 font-extrabold text-slate-900">
+                <span>Expected Cash In Drawer:</span>
+                <span className="text-emerald-600">Rs. {(registerState.openingBalance + grossSales).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="pt-3 flex gap-2">
+              <button onClick={() => window.print()} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded-xl text-xs">Print Z-Report</button>
+              <button onClick={onClose} className="px-4 bg-slate-200 text-slate-800 font-bold py-2 rounded-xl text-xs">Close</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: LOYALTY, PROMOS & GIFT CARDS
+    // ==========================================
+    function LoyaltyModule({ customers, setCustomers, giftCards, setGiftCards, promos, setPromos, showToast }) {
+      const [newPromoCode, setNewPromoCode] = useState('');
+      const [newPromoVal, setNewPromoVal] = useState('');
+
+      const handleAddPromo = (e) => {
+        e.preventDefault();
+        if (!newPromoCode || !newPromoVal) return;
+        const newP = { id: `pr-${Date.now()}`, code: newPromoCode.toUpperCase(), discountType: 'percentage', value: Number(newPromoVal), usageCount: 0, status: 'Active' };
+        setPromos([...promos, newP]);
+        setNewPromoCode(''); setNewPromoVal('');
+        showToast('Promo Code created successfully!', 'success');
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Active Loyalty Members</span>
+              <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{customers.length} Members</h3>
+            </div>
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Active Gift Card Balances</span>
+              <h3 className="text-2xl font-extrabold text-orange-600 mt-1">Rs. {giftCards.reduce((sum, g) => sum + g.balance, 0).toLocaleString()}</h3>
+            </div>
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Active Promo Campaigns</span>
+              <h3 className="text-2xl font-extrabold text-amber-600 mt-1">{promos.length} Campaigns</h3>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-sm text-slate-900">Create New Promo Campaign Code</h3>
+            <form onSubmit={handleAddPromo} className="flex gap-3 text-xs">
+              <input type="text" placeholder="Code (e.g. ZURAIZ20)..." value={newPromoCode} onChange={(e) => setNewPromoCode(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold uppercase" />
+              <input type="number" placeholder="Discount %..." value={newPromoVal} onChange={(e) => setNewPromoVal(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold w-32" />
+              <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl">Add Campaign</button>
+            </form>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-sm text-slate-900">Issued Digital Gift Cards</h3>
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                <tr>
+                  <th className="p-3">Card Voucher Code</th>
+                  <th className="p-3">Assigned Customer</th>
+                  <th className="p-3">Remaining Balance</th>
+                  <th className="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {giftCards.map((gc) => (
+                  <tr key={gc.id}>
+                    <td className="p-3 font-mono font-bold text-orange-600">{gc.code}</td>
+                    <td className="p-3 font-semibold text-slate-800">{gc.customer}</td>
+                    <td className="p-3 font-bold text-slate-900">Rs. {gc.balance.toLocaleString()}</td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">{gc.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: CUSTOMER DIRECTORY & REVIEWS
+    // ==========================================
+    function CustomerDirectoryModule({ customers, setCustomers, showToast }) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Zuraiz Special Customer CRM</h2>
+            <p className="text-xs text-slate-500">Track lifetime spend, favorite orders, ratings, and contact info</p>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                <tr>
+                  <th className="p-4">Customer Name</th>
+                  <th className="p-4">Phone & Email</th>
+                  <th className="p-4">Loyalty Points</th>
+                  <th className="p-4">Lifetime Spend (Rs.)</th>
+                  <th className="p-4">Favorite Dish</th>
+                  <th className="p-4">Recent Review</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {customers.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-50">
+                    <td className="p-4 font-extrabold text-slate-900">{c.name}</td>
+                    <td className="p-4 text-slate-600">
+                      <div>{c.phone}</div>
+                      <div className="text-[10px] text-slate-400">{c.email}</div>
+                    </td>
+                    <td className="p-4 font-bold text-orange-600">{c.points} pts</td>
+                    <td className="p-4 font-bold text-slate-900">Rs. {c.totalSpent.toLocaleString()}</td>
+                    <td className="p-4 font-medium text-slate-700">{c.favorite}</td>
+                    <td className="p-4 text-slate-500 italic">"{c.feedback}"</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: RESERVATIONS & WAITLIST
+    // ==========================================
+    function ReservationsModule({ reservations, setReservations, branches, showToast }) {
+      const [resForm, setResForm] = useState({ guestName: '', phone: '', guests: 2, time: '20:00', branchId: 'b1', table: 'T-01', notes: '' });
+
+      const handleAddRes = (e) => {
+        e.preventDefault();
+        if (!resForm.guestName || !resForm.phone) return;
+        const newR = { id: `r-${Date.now()}`, ...resForm, date: new Date().toISOString().split('T')[0], status: 'Confirmed' };
+        setReservations([newR, ...reservations]);
+        setResForm({ guestName: '', phone: '', guests: 2, time: '20:00', branchId: 'b1', table: 'T-01', notes: '' });
+        showToast(`Reservation created for ${newR.guestName}! SMS sent.`, 'success');
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-sm text-slate-900">Book Table Reservation / Walk-in Waitlist</h3>
+            <form onSubmit={handleAddRes} className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs font-medium">
+              <input type="text" placeholder="Guest Name..." value={resForm.guestName} onChange={(e) => setResForm({...resForm, guestName: e.target.value})} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold" />
+              <input type="text" placeholder="Phone (+92...)" value={resForm.phone} onChange={(e) => setResForm({...resForm, phone: e.target.value})} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5" />
+              <input type="number" placeholder="Guests count" value={resForm.guests} onChange={(e) => setResForm({...resForm, guests: e.target.value})} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold" />
+              <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl py-2.5">Confirm Booking & Send SMS</button>
+            </form>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                <tr>
+                  <th className="p-4">Guest Name</th>
+                  <th className="p-4">Phone</th>
+                  <th className="p-4">Party Size</th>
+                  <th className="p-4">Time & Table</th>
+                  <th className="p-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {reservations.map((r) => (
+                  <tr key={r.id}>
+                    <td className="p-4 font-bold text-slate-900">{r.guestName}</td>
+                    <td className="p-4 text-slate-600">{r.phone}</td>
+                    <td className="p-4 font-bold text-orange-600">{r.guests} Guests</td>
+                    <td className="p-4 font-medium">{r.time} ({r.table})</td>
+                    <td className="p-4"><span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">{r.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: STAFF DIRECTORY & SECURITY ROLES
+    // ==========================================
+    function StaffDirectoryModule({ users, setUsers, branches, showToast }) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Staff & Security Directory</h2>
+            <p className="text-xs text-slate-500">Manage staff roles (Cashier vs Manager vs Kitchen), branch access, and hourly rates in PKR</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {users.map((u) => (
+              <div key={u.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                <div className="flex items-center gap-3">
+                  <img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover border-2 border-orange-500" />
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">{u.name}</h4>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">{u.role}</span>
+                  </div>
+                </div>
+                <div className="text-xs space-y-1 text-slate-600 pt-2 border-t border-slate-100">
+                  <p>Email: <span className="font-medium text-slate-800">{u.email}</span></p>
+                  <p>Phone: <span className="font-medium text-slate-800">{u.phone || '+92 300 0000000'}</span></p>
+                  <p>Rate: <span className="font-bold text-orange-600">Rs. {u.hourly_rate || 500} / hr</span></p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: SCHEDULING & TIME CLOCK ATTENDANCE
+    // ==========================================
+    function SchedulingModule({ shifts, setShifts, attendance, setAttendance, users, branches, showToast }) {
+      const handleClockIn = (userName) => {
+        const timeStr = new Date().toLocaleTimeString();
+        const newAtt = { id: `a-${Date.now()}`, userId: 'u3', userName: userName, clockIn: timeStr, clockOut: 'In Progress', totalHours: 0, date: new Date().toISOString().split('T')[0] };
+        setAttendance([newAtt, ...attendance]);
+        showToast(`Clocked IN successfully at ${timeStr}`, 'success');
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Shift Scheduling & Attendance</h2>
+              <p className="text-xs text-slate-500">Coordinate shifts, time clocks, and time-off requests</p>
+            </div>
+            <button onClick={() => handleClockIn('Cashier Main')} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md">
+              <Icon name="clock" className="w-4 h-4" /> Quick Time Clock IN
+            </button>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-sm text-slate-900">Attendance & Time Clock Records</h3>
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                <tr>
+                  <th className="p-3">Staff Member</th>
+                  <th className="p-3">Clock In</th>
+                  <th className="p-3">Clock Out</th>
+                  <th className="p-3">Total Shift Hours</th>
+                  <th className="p-3">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {attendance.map((a) => (
+                  <tr key={a.id}>
+                    <td className="p-3 font-bold text-slate-900">{a.userName}</td>
+                    <td className="p-3 font-medium text-emerald-600">{a.clockIn}</td>
+                    <td className="p-3 font-medium text-slate-600">{a.clockOut}</td>
+                    <td className="p-3 font-bold text-orange-600">{a.totalHours} hrs</td>
+                    <td className="p-3 text-slate-400">{a.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: PAYROLL & TIP POOLING
+    // ==========================================
+    function PayrollModule({ users, attendance, showToast }) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Payroll & Tip Declarations</h2>
+              <p className="text-xs text-slate-500">Calculate total hours worked, hourly wages, and export CSV for payroll processing</p>
+            </div>
+            <button onClick={() => showToast('Payroll dataset exported to CSV file!', 'info')} className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-2">
+              <Icon name="download" className="w-4 h-4" /> Export Payroll Data
+            </button>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                <tr>
+                  <th className="p-4">Employee</th>
+                  <th className="p-4">Role</th>
+                  <th className="p-4">Hourly Rate (PKR)</th>
+                  <th className="p-4">Logged Hours</th>
+                  <th className="p-4">Gross Wage (Rs.)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {users.map((u) => {
+                  const hours = attendance.filter((a) => a.userId === u.id).reduce((sum, a) => sum + a.totalHours, 8.5);
+                  const rate = u.hourly_rate || 500;
+                  const grossWage = hours * rate;
+                  return (
+                    <tr key={u.id}>
+                      <td className="p-4 font-bold text-slate-900">{u.name}</td>
+                      <td className="p-4 font-semibold text-slate-600">{u.role}</td>
+                      <td className="p-4 font-medium">Rs. {rate} / hr</td>
+                      <td className="p-4 font-bold text-orange-600">{hours} hrs</td>
+                      <td className="p-4 font-extrabold text-emerald-600">Rs. {grossWage.toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: RECIPES & FOOD COSTING
+    // ==========================================
+    function RecipesModule({ recipes, setRecipes, menuItems, showToast }) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Recipe & Ingredient Food Costing</h2>
+            <p className="text-xs text-slate-500">Analyze COGS per dish, calculate profit margins, and standardize kitchen recipes</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {recipes.map((rc) => {
+              const margin = rc.sellingPrice - rc.cogs;
+              const marginPct = ((margin / rc.sellingPrice) * 100).toFixed(1);
+              return (
+                <div key={rc.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-extrabold text-slate-900 text-sm">{rc.menuName}</h4>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">{marginPct}% Margin</span>
+                  </div>
+                  <div className="text-xs space-y-1">
+                    <p className="text-slate-500">Selling Price: <span className="font-bold text-slate-900">Rs. {rc.sellingPrice}</span></p>
+                    <p className="text-slate-500">Dish COGS: <span className="font-bold text-rose-600">Rs. {rc.cogs}</span></p>
+                    <p className="text-slate-500">Profit Margin: <span className="font-bold text-emerald-600">Rs. {margin}</span></p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE 2: POINT OF SALE (POS) & BILLING (PKR & GIFT CARDS)
+    // ==========================================
+    function POSModule({ menuItems, selectedBranchId, branches, orders, setOrders, showToast, setReceiptModalOrder, promos, giftCards }) {
+      const [cart, setCart] = useState([]);
+      const [selectedCategory, setSelectedCategory] = useState('All');
+      const [searchQuery, setSearchQuery] = useState('');
+      const [orderType, setOrderType] = useState('Dine-in');
+      const [tableNumber, setTableNumber] = useState('T-01');
+      const [paymentMethod, setPaymentMethod] = useState('Cash');
+      const [discountPercent, setDiscountPercent] = useState(0);
+      const [discountCode, setDiscountCode] = useState('');
+      const [activeBranchForOrder, setActiveBranchForOrder] = useState(
+        selectedBranchId !== 'all' ? selectedBranchId : branches[0]?.id || 'b1'
+      );
+
+      const categories = ['All', 'Burgers', 'Pizzas', 'Starters', 'Drinks', 'Desserts'];
+
+      const filteredItems = menuItems.filter((item) => {
+        const matchesCat = selectedCategory === 'All' || item.category === selectedCategory;
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCat && matchesSearch;
+      });
+
+      const addToCart = (item) => {
+        setCart((prev) => {
+          const existing = prev.find((i) => i.id === item.id);
+          if (existing) {
+            return prev.map((i) => (i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
+          }
+          return [...prev, { ...item, quantity: 1, notes: '' }];
+        });
+      };
+
+      const updateQuantity = (id, delta) => {
+        setCart((prev) =>
+          prev
+            .map((item) => {
+              if (item.id === id) {
+                const newQty = item.quantity + delta;
+                return newQty > 0 ? { ...item, quantity: newQty } : null;
+              }
+              return item;
+            })
+            .filter(Boolean)
+        );
+      };
+
+      const updateItemNotes = (id, notes) => {
+        setCart((prev) => prev.map((i) => (i.id === id ? { ...i, notes } : i)));
+      };
+
+      const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      const discountAmount = (subtotal * discountPercent) / 100;
+      const tax = (subtotal - discountAmount) * 0.16; // 16% Pakistani GST
+      const grandTotal = subtotal - discountAmount + tax;
+
+      const applyDiscount = () => {
+        const foundPromo = promos.find((p) => p.code === discountCode.toUpperCase() && p.status === 'Active');
+        if (foundPromo) {
+          setDiscountPercent(foundPromo.value);
+          showToast(`${foundPromo.value}% Promo Discount Applied!`, 'success');
+        } else if (discountCode.toUpperCase() === 'PROMO10') {
+          setDiscountPercent(10);
+          showToast('10% Promo Discount Applied!', 'success');
+        } else {
+          showToast('Invalid Promo Code', 'error');
+        }
+      };
+
+      const handleCheckout = () => {
+        if (cart.length === 0) {
+          showToast('Cart is empty!', 'warning');
+          return;
+        }
+
+        const newOrder = {
+          id: `ord-${Date.now()}`,
+          order_number: `#${Math.floor(1000 + Math.random() * 9000)}`,
+          branch_id: activeBranchForOrder,
+          table_number: tableNumber,
+          order_type: orderType,
+          status: 'New Orders',
+          items: cart,
+          total_amount: Number(grandTotal.toFixed(0)),
+          payment_method: paymentMethod,
+          created_at: new Date().toISOString()
+        };
+
+        setOrders([newOrder, ...orders]);
+        setCart([]);
+        showToast(`Order ${newOrder.order_number} placed successfully!`, 'success');
+        setReceiptModalOrder(newOrder);
+      };
+
+      return (
+        <div className="h-full flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 flex flex-col gap-4">
+            {selectedBranchId === 'all' && (
+              <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl flex items-center justify-between text-xs text-orange-900 font-semibold">
+                <span>Aggregated View: Select branch for this order:</span>
+                <select
+                  value={activeBranchForOrder}
+                  onChange={(e) => setActiveBranchForOrder(e.target.value)}
+                  className="bg-white border border-orange-300 text-slate-900 rounded px-2 py-1 text-xs font-bold"
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+                      selectedCategory === cat
+                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Icon name="search" className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search items..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-orange-500"
+                />
+              </div>
+            </div>
+
+            {filteredItems.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center my-auto shadow-sm">
+                <Icon name="book-open" className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <h3 className="font-bold text-slate-800 text-base">No Menu Items Available</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                  Zuraiz Special has no items in the menu currently. Go to the "Menu Setup" tab to add your custom dishes!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
+                {filteredItems.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => addToCart(item)}
+                    className="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-orange-500 transition cursor-pointer flex flex-col justify-between shadow-sm hover:shadow-md"
+                  >
+                    <div className="h-32 relative overflow-hidden bg-slate-100">
+                      <img
+                        src={item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&auto=format&fit=crop&q=80'}
+                        alt={item.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                      <span className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold text-orange-600 border border-slate-200 shadow-sm">
+                        Rs. {item.price}
+                      </span>
+                    </div>
+                    <div className="p-3">
+                      <h4 className="font-bold text-xs text-slate-800 line-clamp-1 group-hover:text-orange-600 transition">
+                        {item.name}
+                      </h4>
+                      <div className="flex items-center justify-between mt-2 text-[11px] text-slate-500">
+                        <span>Stock: {item.stock || 50}</span>
+                        <button className="p-1.5 rounded-lg bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white transition font-bold">
+                          <Icon name="plus" className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Cart Panel */}
+          <div className="w-full lg:w-96 bg-white border border-slate-200 rounded-2xl flex flex-col justify-between p-4 shadow-sm">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                  <Icon name="shopping-bag" className="w-4 h-4 text-orange-600" /> Current Order Cart
+                </h3>
+                <span className="text-xs text-slate-500 font-bold">{cart.length} items</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 my-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-slate-400">Order Type</label>
+                  <select
+                    value={orderType}
+                    onChange={(e) => setOrderType(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-800 rounded-xl p-2 mt-1 focus:outline-none font-semibold"
+                  >
+                    <option value="Dine-in">Dine-in</option>
+                    <option value="Takeaway">Takeaway</option>
+                    <option value="Delivery">Delivery</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-slate-400">Table / Ref</label>
+                  <input
+                    type="text"
+                    value={tableNumber}
+                    onChange={(e) => setTableNumber(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-800 rounded-xl p-2 mt-1 focus:outline-none font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 max-h-56 overflow-y-auto pr-1 border-b border-slate-100 pb-3">
+                {cart.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400 text-xs">
+                    No items added to order yet.
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <div key={item.id} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-800">{item.name}</span>
+                        <span className="text-orange-600 font-bold">Rs. {(item.price * item.quantity).toLocaleString()}</span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Custom notes (e.g. Extra spicy)..."
+                        value={item.notes}
+                        onChange={(e) => updateItemNotes(item.id, e.target.value)}
+                        className="w-full bg-transparent text-[11px] text-slate-600 placeholder-slate-400 mt-1 focus:outline-none"
+                      />
+                      <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-medium">Rs. {item.price} each</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(item.id, -1)}
+                            className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold text-xs"
+                          >
+                            -
+                          </button>
+                          <span className="text-xs font-bold text-slate-900 w-4 text-center">{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.id, 1)}
+                            className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold text-xs"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Promo Code (PROMO10)"
+                  value={discountCode}
+                  onChange={(e) => setDiscountCode(e.target.value)}
+                  className="flex-1 bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-1.5 text-slate-800 uppercase font-semibold"
+                />
+                <button
+                  onClick={applyDiscount}
+                  className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-xs font-bold rounded-xl text-slate-800"
+                >
+                  Apply
+                </button>
+              </div>
+
+              <div className="space-y-1.5 text-xs text-slate-500 font-medium">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>Rs. {subtotal.toLocaleString()}</span>
+                </div>
+                {discountPercent > 0 && (
+                  <div className="flex justify-between text-orange-600 font-bold">
+                    <span>Discount ({discountPercent}%):</span>
+                    <span>-Rs. {discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>Sales Tax (16% GST):</span>
+                  <span>Rs. {tax.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                </div>
+                <div className="flex justify-between font-extrabold text-sm text-slate-900 border-t border-slate-200 pt-2 mt-1">
+                  <span>Grand Total:</span>
+                  <span className="text-orange-600">Rs. {grandTotal.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                {['Cash', 'Card', 'Gift Card'].map((pm) => (
+                  <button
+                    key={pm}
+                    onClick={() => setPaymentMethod(pm)}
+                    className={`py-1.5 rounded-xl text-[11px] font-bold border transition ${
+                      paymentMethod === pm
+                        ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {pm}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={handleCheckout}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-orange-500/30 transition flex items-center justify-center gap-2"
+              >
+                <Icon name="receipt" className="w-4 h-4" /> Place Order & Print Bill
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE 4: ORDER MANAGEMENT & VOID LOGGING
+    // ==========================================
+    function OrderManagementModule({ orders, setOrders, branches, menuItems, setReceiptModalOrder, showToast, selectedBranchId, voidLogs, setVoidLogs, currentUser }) {
+      const [statusFilter, setStatusFilter] = useState('All');
+      const [addModalOpen, setAddModalOpen] = useState(false);
+      const [editingOrder, setEditingOrder] = useState(null);
+
+      const [orderForm, setOrderForm] = useState({
+        branch_id: selectedBranchId !== 'all' ? selectedBranchId : branches[0]?.id || 'b1',
+        table_number: 'T-01',
+        order_type: 'Dine-in',
+        payment_method: 'Cash',
+        status: 'New Orders',
+        items: [],
+        custom_notes: ''
+      });
+
+      const filtered = orders.filter((o) => (statusFilter === 'All' ? true : o.status === statusFilter));
+
+      const handleOpenAddModal = () => {
+        setEditingOrder(null);
+        setOrderForm({
+          branch_id: selectedBranchId !== 'all' ? selectedBranchId : branches[0]?.id || 'b1',
+          table_number: 'T-05',
+          order_type: 'Dine-in',
+          payment_method: 'Cash',
+          status: 'New Orders',
+          items: [{ item_id: menuItems[0]?.id || '', quantity: 1, notes: '' }],
+          custom_notes: ''
+        });
+        setAddModalOpen(true);
+      };
+
+      const handleOpenEditModal = (ord) => {
+        setEditingOrder(ord);
+        setOrderForm({
+          branch_id: ord.branch_id,
+          table_number: ord.table_number,
+          order_type: ord.order_type,
+          payment_method: ord.payment_method,
+          status: ord.status,
+          items: ord.items.map((i) => ({
+            item_id: i.id || menuItems.find((m) => m.name === i.name)?.id || '',
+            quantity: i.quantity,
+            notes: i.notes || ''
+          })),
+          custom_notes: ''
+        });
+        setAddModalOpen(true);
+      };
+
+      const handleDeleteOrder = (orderId, orderNum, totalAmt) => {
+        const reason = window.prompt(`Please enter void reason for order ${orderNum}:`);
+        if (reason) {
+          const newVoid = {
+            id: `v-${Date.now()}`,
+            orderNumber: orderNum,
+            item: 'Whole Order Voided',
+            amount: totalAmt,
+            reason: reason,
+            voidedBy: currentUser.name,
+            date: new Date().toLocaleString()
+          };
+          setVoidLogs([newVoid, ...voidLogs]);
+          setOrders((prev) => prev.filter((o) => o.id !== orderId));
+          showToast(`Order ${orderNum} voided and logged to audit table!`, 'warning');
+        }
+      };
+
+      const handleAddItemToForm = () => {
+        setOrderForm((prev) => ({
+          ...prev,
+          items: [...prev.items, { item_id: menuItems[0]?.id || '', quantity: 1, notes: '' }]
+        }));
+      };
+
+      const handleRemoveItemFromForm = (index) => {
+        setOrderForm((prev) => ({
+          ...prev,
+          items: prev.items.filter((_, idx) => idx !== index)
+        }));
+      };
+
+      const handleSaveOrder = (e) => {
+        e.preventDefault();
+        if (orderForm.items.length === 0) {
+          showToast('Please add at least one item to the order', 'error');
+          return;
+        }
+
+        const compiledItems = orderForm.items.map((row) => {
+          const foundItem = menuItems.find((m) => m.id === row.item_id) || menuItems[0];
+          return {
+            id: foundItem ? foundItem.id : 'custom',
+            name: foundItem ? foundItem.name : 'Item',
+            price: foundItem ? foundItem.price : 100,
+            quantity: Number(row.quantity),
+            notes: row.notes
+          };
+        });
+
+        const calculatedTotal = compiledItems.reduce((sum, i) => sum + i.price * i.quantity, 0) * 1.16;
+
+        if (editingOrder) {
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === editingOrder.id
+                ? {
+                    ...o,
+                    branch_id: orderForm.branch_id,
+                    table_number: orderForm.table_number,
+                    order_type: orderForm.order_type,
+                    payment_method: orderForm.payment_method,
+                    status: orderForm.status,
+                    items: compiledItems,
+                    total_amount: Number(calculatedTotal.toFixed(0))
+                  }
+                : o
+            )
+          );
+          showToast(`Order ${editingOrder.order_number} updated!`, 'success');
+        } else {
+          const newOrd = {
+            id: `ord-${Date.now()}`,
+            order_number: `#${Math.floor(1000 + Math.random() * 9000)}`,
+            branch_id: orderForm.branch_id,
+            table_number: orderForm.table_number,
+            order_type: orderForm.order_type,
+            status: orderForm.status,
+            items: compiledItems,
+            total_amount: Number(calculatedTotal.toFixed(0)),
+            payment_method: orderForm.payment_method,
+            created_at: new Date().toISOString()
+          };
+          setOrders([newOrd, ...orders]);
+          showToast(`New Order ${newOrd.order_number} created!`, 'success');
+        }
+
+        setAddModalOpen(false);
+      };
+
+      return (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Order History & Management</h2>
+              <p className="text-xs text-slate-500">Create, edit, view receipts, or void branch orders</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleOpenAddModal}
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 transition"
+              >
+                <Icon name="plus" className="w-4 h-4" /> Create New Order
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {['All', 'New Orders', 'In Preparation', 'Ready for Pickup', 'Completed', 'Cancelled'].map((st) => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  statusFilter === st
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase font-bold text-[10px] tracking-wider">
+                <tr>
+                  <th className="p-4">Order ID</th>
+                  <th className="p-4">Branch</th>
+                  <th className="p-4">Table / Type</th>
+                  <th className="p-4">Items Count</th>
+                  <th className="p-4">Total Amount (PKR)</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="p-8 text-center text-slate-400">
+                      No orders found matching status filter.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-slate-50 transition">
+                      <td className="p-4 font-extrabold text-orange-600">{ord.order_number}</td>
+                      <td className="p-4 font-semibold text-slate-700">
+                        {branches.find((b) => b.id === ord.branch_id)?.name || ord.branch_id}
+                      </td>
+                      <td className="p-4 font-medium">
+                        {ord.table_number} <span className="text-slate-400">({ord.order_type})</span>
+                      </td>
+                      <td className="p-4 font-semibold">{ord.items.length} items</td>
+                      <td className="p-4 font-bold text-slate-900">Rs. {ord.total_amount.toLocaleString()}</td>
+                      <td className="p-4">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            ord.status === 'Completed'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : ord.status === 'In Preparation'
+                              ? 'bg-amber-100 text-amber-700'
+                              : ord.status === 'Cancelled'
+                              ? 'bg-rose-100 text-rose-700'
+                              : 'bg-sky-100 text-sky-700'
+                          }`}
+                        >
+                          {ord.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right space-x-1.5">
+                        <button
+                          onClick={() => setReceiptModalOrder(ord)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition"
+                        >
+                          Receipt
+                        </button>
+                        <button
+                          onClick={() => handleOpenEditModal(ord)}
+                          className="px-2.5 py-1.5 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold text-[11px] transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteOrder(ord.id, ord.order_number, ord.total_amount)}
+                          className="px-2.5 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-[11px] transition"
+                        >
+                          Void
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* CREATE / EDIT ORDER MODAL */}
+          {addModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+              <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                  <h3 className="font-bold text-base text-slate-900">
+                    {editingOrder ? `Edit Order ${editingOrder.order_number}` : 'Create New Customer Order'}
+                  </h3>
+                  <button onClick={() => setAddModalOpen(false)} className="text-slate-400 hover:text-slate-800">
+                    <Icon name="x" className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveOrder} className="space-y-4 text-xs font-medium">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-slate-500 block mb-1">Target Branch</label>
+                      <select
+                        value={orderForm.branch_id}
+                        onChange={(e) => setOrderForm({ ...orderForm, branch_id: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:outline-none"
+                      >
+                        {branches.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-slate-500 block mb-1">Order Status</label>
+                      <select
+                        value={orderForm.status}
+                        onChange={(e) => setOrderForm({ ...orderForm, status: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:outline-none"
+                      >
+                        <option value="New Orders">New Orders</option>
+                        <option value="In Preparation">In Preparation</option>
+                        <option value="Ready for Pickup">Ready for Pickup</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-slate-500 block mb-1">Order Type</label>
+                      <select
+                        value={orderForm.order_type}
+                        onChange={(e) => setOrderForm({ ...orderForm, order_type: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:outline-none"
+                      >
+                        <option value="Dine-in">Dine-in</option>
+                        <option value="Takeaway">Takeaway</option>
+                        <option value="Delivery">Delivery</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-slate-500 block mb-1">Table Number</label>
+                      <input
+                        type="text"
+                        value={orderForm.table_number}
+                        onChange={(e) => setOrderForm({ ...orderForm, table_number: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:outline-none"
+                        placeholder="T-01"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-slate-500 block mb-1">Payment Method</label>
+                      <select
+                        value={orderForm.payment_method}
+                        onChange={(e) => setOrderForm({ ...orderForm, payment_method: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 font-bold focus:outline-none"
+                      >
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="Gift Card">Gift Card</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Order Items Selector */}
+                  <div className="border-t border-slate-100 pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-slate-700 font-bold">Select Order Items</label>
+                      <button
+                        type="button"
+                        onClick={handleAddItemToForm}
+                        className="text-orange-600 hover:text-orange-700 font-bold text-[11px] flex items-center gap-1"
+                      >
+                        <Icon name="plus" className="w-3.5 h-3.5" /> Add Row
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {orderForm.items.map((row, idx) => (
+                        <div key={idx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-200">
+                          {menuItems.length > 0 ? (
+                            <select
+                              value={row.item_id}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setOrderForm((prev) => ({
+                                  ...prev,
+                                  items: prev.items.map((it, i) => (i === idx ? { ...it, item_id: val } : it))
+                                }));
+                              }}
+                              className="flex-1 bg-white border border-slate-200 text-xs rounded-lg p-2 font-semibold text-slate-800"
+                            >
+                              {menuItems.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.name} (Rs. {m.price})
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="Add item in Menu Setup first"
+                              disabled
+                              className="flex-1 bg-slate-100 border border-slate-200 text-xs rounded-lg p-2 text-slate-400"
+                            />
+                          )}
+                          <input
+                            type="number"
+                            min="1"
+                            value={row.quantity}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                items: prev.items.map((it, i) => (i === idx ? { ...it, quantity: val } : it))
+                              }));
+                            }}
+                            className="w-16 bg-white border border-slate-200 text-xs rounded-lg p-2 font-bold text-center"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Notes..."
+                            value={row.notes}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                items: prev.items.map((it, i) => (i === idx ? { ...it, notes: val } : it))
+                              }));
+                            }}
+                            className="w-28 bg-white border border-slate-200 text-xs rounded-lg p-2 text-slate-600"
+                          />
+                          {orderForm.items.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItemFromForm(idx)}
+                              className="p-1.5 text-rose-500 hover:text-rose-700"
+                            >
+                              <Icon name="trash-2" className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-md shadow-orange-500/30 text-sm mt-2"
+                  >
+                    {editingOrder ? 'Update Order Details' : 'Save & Submit Order'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // RECEIPT MODAL COMPONENT (PKR)
+    // ==========================================
+    function ReceiptModal({ order, branch, onClose }) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div className="text-center border-b border-dashed border-slate-200 pb-4">
+              <h2 className="text-lg font-extrabold text-slate-900">ZURAIZ SPECIAL</h2>
+              <p className="text-xs text-slate-500">{branch?.name || 'Main Branch'}</p>
+              <p className="text-[10px] text-slate-400">{branch?.address}</p>
+              <p className="text-[10px] text-slate-400">Phone: {branch?.phone}</p>
+            </div>
+
+            <div className="text-xs space-y-1 text-slate-600">
+              <div className="flex justify-between">
+                <span>Order Ref:</span>
+                <span className="font-bold text-slate-900">{order.order_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Date:</span>
+                <span>{new Date(order.created_at).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Type / Table:</span>
+                <span>
+                  {order.order_type} ({order.table_number})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Payment:</span>
+                <span className="font-bold text-orange-600">{order.payment_method}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-b border-dashed border-slate-200 py-3 space-y-2">
+              {order.items.map((item, idx) => (
+                <div key={idx} className="flex justify-between text-xs">
+                  <div>
+                    <p className="font-bold text-slate-800">{item.name}</p>
+                    <p className="text-[10px] text-slate-400">
+                      {item.quantity} x Rs. {item.price}
+                    </p>
+                  </div>
+                  <span className="font-bold text-slate-900">
+                    Rs. {(item.quantity * item.price).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-1 text-xs text-slate-600 font-medium">
+              <div className="flex justify-between">
+                <span>Sales Tax (16% GST):</span>
+                <span>Included</span>
+              </div>
+              <div className="flex justify-between font-extrabold text-sm text-slate-900 pt-1">
+                <span>Total Amount:</span>
+                <span className="text-orange-600">Rs. {order.total_amount.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex gap-2">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20"
+              >
+                <Icon name="printer" className="w-3.5 h-3.5" /> Print Receipt
+              </button>
+              <button
+                onClick={onClose}
+                className="px-4 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 rounded-xl text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Render the App into the root container
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

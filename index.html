@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Zuraiz Special - Multi-Branch Restaurant Management System</title>
+  <title>Royal India By Spicy Twist - Multi-Branch Restaurant Management System</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React & React DOM -->
@@ -12,9 +12,6 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <!-- Babel Compiler for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Firebase Realtime Database -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Custom Font -->
@@ -103,25 +100,11 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect, useRef } = React;
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDcvhLQVBriyVP_MhwXh_5Yfi_1M7Yvccc",
-      authDomain: "restaurentmanagement-b6581.firebaseapp.com",
-      databaseURL: "https://restaurentmanagement-b6581-default-rtdb.firebaseio.com",
-      projectId: "restaurentmanagement-b6581",
-      storageBucket: "restaurentmanagement-b6581.firebasestorage.app",
-      messagingSenderId: "422879769576",
-      appId: "1:422879769576:web:0a2c5431e6146ee2882a5d",
-      measurementId: "G-M0EHGXET11"
-    };
-    const firebaseDatabase = window.firebase
-      ? (window.firebase.apps.length ? window.firebase.app() : window.firebase.initializeApp(firebaseConfig)).database()
-      : null;
-
-    // --- CLEAN INITIAL DATA FOR ZURAIZ SPECIAL ---
+    // --- CLEAN INITIAL DATA FOR ROYAL INDIA BY SPICY TWIST ---
     const INITIAL_BRANCHES = [
-      { id: 'b1', name: 'Zuraiz Special - Gulberg Main', address: 'Main Boulevard, Gulberg III, Lahore', phone: '+92 42 111-987-654', status: 'Active' },
-      { id: 'b2', name: 'Zuraiz Special - DHA Phase 5', address: 'Phase 5 Commercial Area, DHA, Lahore', phone: '+92 42 111-987-655', status: 'Active' },
-      { id: 'b3', name: 'Zuraiz Special - Johar Town', address: 'Emporium Mall Road, Johar Town, Lahore', phone: '+92 42 111-987-656', status: 'Active' }
+      { id: 'b1', name: 'Royal India By Spicy Twist - Gulberg Main', address: 'Main Boulevard, Gulberg III, Lahore', phone: '+92 42 111-987-654', status: 'Active' },
+      { id: 'b2', name: 'Royal India By Spicy Twist - DHA Phase 5', address: 'Phase 5 Commercial Area, DHA, Lahore', phone: '+92 42 111-987-655', status: 'Active' },
+      { id: 'b3', name: 'Royal India By Spicy Twist - Johar Town', address: 'Emporium Mall Road, Johar Town, Lahore', phone: '+92 42 111-987-656', status: 'Active' }
     ];
 
     const INITIAL_USERS = [
@@ -204,7 +187,6 @@
       const [currentUser, setCurrentUser] = useState(SAVED_BACKUP?.users?.find((user) => user.id === SAVED_BACKUP.currentUserId) || INITIAL_USERS[0]);
       const [menuItems, setMenuItems] = useState(SAVED_BACKUP?.menuItems || INITIAL_MENU);
       const [orders, setOrdersState] = useState(SAVED_BACKUP?.orders || INITIAL_ORDERS);
-      const ordersRef = useRef(SAVED_BACKUP?.orders || INITIAL_ORDERS);
       const [inventory, setInventory] = useState(SAVED_BACKUP?.inventory || INITIAL_INVENTORY);
       const [customers, setCustomers] = useState(SAVED_BACKUP?.customers || INITIAL_CUSTOMERS);
       const [giftCards, setGiftCards] = useState(SAVED_BACKUP?.giftCards || INITIAL_GIFT_CARDS);
@@ -231,7 +213,7 @@
       const [loginError, setLoginError] = useState('');
       const [toasts, setToasts] = useState([]);
       const [notifications, setNotifications] = useState([
-        { id: 1, title: 'Zuraiz Special System Online', msg: 'All PKR (Rs.) reporting and multi-branch tools ready!', time: 'Just now', unread: true }
+        { id: 1, title: 'Royal India By Spicy Twist System Online', msg: 'All PKR (Rs.) reporting and multi-branch tools ready!', time: 'Just now', unread: true }
       ]);
       const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
@@ -252,28 +234,7 @@
       };
 
       const setOrders = (update) => {
-        const previousOrders = ordersRef.current;
-        const nextOrders = typeof update === 'function' ? update(previousOrders) : update;
-        ordersRef.current = nextOrders;
-        setOrdersState(nextOrders);
-
-        if (!firebaseDatabase) return;
-        const previousById = new Map(previousOrders.map((order) => [order.id, order]));
-        const nextById = new Map(nextOrders.map((order) => [order.id, order]));
-        nextById.forEach((order, id) => {
-          if (JSON.stringify(previousById.get(id)) !== JSON.stringify(order)) {
-            firebaseDatabase.ref(`orders/${id}`).set(order).catch(() => {
-              showToast('Order could not be saved to the shared database.', 'error');
-            });
-          }
-        });
-        previousById.forEach((_, id) => {
-          if (!nextById.has(id)) {
-            firebaseDatabase.ref(`orders/${id}`).remove().catch(() => {
-              showToast('Order could not be removed from the shared database.', 'error');
-            });
-          }
-        });
+        setOrdersState((previousOrders) => typeof update === 'function' ? update(previousOrders) : update);
       };
 
       const getBackupData = () => ({
@@ -283,7 +244,7 @@
       });
 
       const handleExportBackup = () => {
-        const backup = { app: 'Zuraiz Special', version: 1, exportedAt: new Date().toISOString(), data: getBackupData() };
+        const backup = { app: 'Royal India By Spicy Twist', version: 1, exportedAt: new Date().toISOString(), data: getBackupData() };
         const file = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(file);
         const link = document.createElement('a');
@@ -303,7 +264,7 @@
           if (!data || !BACKUP_ARRAY_KEYS.every((key) => Array.isArray(data[key])) || !data.registerState || !Array.isArray(data.registerState.cashDrops)) {
             throw new Error('Invalid backup structure');
           }
-          const savedBackup = { app: 'Zuraiz Special', version: 1, exportedAt: backup.exportedAt || new Date().toISOString(), data };
+          const savedBackup = { app: 'Royal India By Spicy Twist', version: 1, exportedAt: backup.exportedAt || new Date().toISOString(), data };
           window.localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(savedBackup));
           setBranches(data.branches);
           setUsers(data.users);
@@ -331,25 +292,6 @@
         }
         event.target.value = '';
       };
-
-      useEffect(() => {
-        if (!firebaseDatabase) {
-          showToast('Firebase did not load. Orders will not sync between devices.', 'error');
-          return undefined;
-        }
-        const ordersRefInDatabase = firebaseDatabase.ref('orders');
-        const handleOrders = (snapshot) => {
-          const data = snapshot.val();
-          const remoteOrders = data ? Object.values(data).filter(Boolean) : [];
-          ordersRef.current = remoteOrders;
-          setOrdersState(remoteOrders);
-        };
-        const handleDatabaseError = () => {
-          showToast('Cannot access Firebase orders. Check your Realtime Database rules.', 'error');
-        };
-        ordersRefInDatabase.on('value', handleOrders, handleDatabaseError);
-        return () => ordersRefInDatabase.off('value', handleOrders);
-      }, []);
 
       // Branch Selector Filter helper
       const filteredOrders = useMemo(() => {
@@ -392,7 +334,7 @@
                 <div className="absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-white/10 blur-2xl"></div>
                 <div className="relative flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-xl font-black">Z</div>
-                  <div><p className="font-extrabold tracking-wide">ZURAIZ SPECIAL</p><p className="text-xs text-orange-100">Restaurant management</p></div>
+                  <div><p className="font-extrabold tracking-wide">ROYAL INDIA BY SPICY TWIST</p><p className="text-xs text-orange-100">Restaurant management</p></div>
                 </div>
                 <div className="relative max-w-md">
                   <p className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-orange-100">Welcome back</p>
@@ -405,7 +347,7 @@
               <section className="flex min-h-[600px] flex-col justify-center px-6 py-12 sm:px-12 lg:px-14">
                 <div className="mb-10 lg:hidden">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500 text-xl font-black text-white shadow-lg shadow-orange-500/25">Z</div>
-                  <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-orange-600">Zuraiz Special</p>
+                  <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-orange-600">Royal India By Spicy Twist</p>
                 </div>
                 <div className="mb-8">
                   <p className="text-sm font-semibold text-orange-600">ADMIN PORTAL</p>
@@ -473,7 +415,7 @@
                     </div>
                     <div>
                       <h1 className="font-extrabold text-base text-slate-900 leading-none">
-                        Zuraiz Special
+                        Royal India By Spicy Twist
                       </h1>
                       <span className="text-[10px] uppercase tracking-wider text-orange-600 font-bold">
                         Enterprise PKR POS
@@ -792,14 +734,14 @@
           {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div>
-              <h2 className="text-xl font-extrabold text-slate-900">Zuraiz Special Executive Dashboard</h2>
+              <h2 className="text-xl font-extrabold text-slate-900">Royal India By Spicy Twist Executive Dashboard</h2>
               <p className="text-xs text-slate-500 mt-1">
                 Real-time multi-branch financial metrics in <span className="text-orange-600 font-bold">Pakistani Rupees (Rs.)</span>
               </p>
             </div>
             <div className="mt-4 sm:mt-0 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Zuraiz Special PKR Live
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Royal India By Spicy Twist PKR Live
               </span>
               <button type="button" onClick={onExportBackup} className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-md shadow-orange-500/20 transition hover:bg-orange-600">
                 <Icon name="download" className="w-4 h-4" /> Export Backup
@@ -816,7 +758,7 @@
             <KpiCard title="Delivery Orders" value={deliveryOrders} subtext="Home delivery dispatch" icon={<Icon name="bike" className="w-5 h-5 text-teal-600" />} />
             <KpiCard title="Total Menu Items" value={totalMenuItemsCount} subtext="Active food & drink dishes" icon={<Icon name="book-open" className="w-5 h-5 text-purple-600" />} />
             <KpiCard title="Low Stock Alerts" value={lowStockCount} subtext="Ingredients below reorder level" icon={<Icon name="alert-triangle" className="w-5 h-5 text-rose-600" />} />
-            <KpiCard title="Active Branches" value={activeBranchesCount} subtext="Zuraiz Special locations" icon={<Icon name="building-2" className="w-5 h-5 text-orange-500" />} />
+            <KpiCard title="Active Branches" value={activeBranchesCount} subtext="Royal India By Spicy Twist locations" icon={<Icon name="building-2" className="w-5 h-5 text-orange-500" />} />
           </div>
 
           {/* 8 ANALYTICAL VISUALIZER CHARTS */}
@@ -1271,7 +1213,7 @@
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
             <div className="text-center border-b border-dashed border-slate-300 pb-3">
-              <h2 className="font-extrabold text-lg text-slate-900">ZURAIZ SPECIAL Z-REPORT</h2>
+              <h2 className="font-extrabold text-lg text-slate-900">ROYAL INDIA BY SPICY TWIST Z-REPORT</h2>
               <p className="text-[10px] text-slate-500">Official End-of-Shift Terminal Audit</p>
               <p className="text-[10px] text-slate-400 mt-1">{new Date().toLocaleString()}</p>
             </div>
@@ -1372,7 +1314,7 @@
       return (
         <div className="space-y-6">
           <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900">Zuraiz Special Customer CRM</h2>
+            <h2 className="text-lg font-bold text-slate-900">Royal India By Spicy Twist Customer CRM</h2>
             <p className="text-xs text-slate-500">Track lifetime spend, favorite orders, ratings, and contact info</p>
           </div>
 
@@ -1909,7 +1851,7 @@
                 <Icon name="book-open" className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <h3 className="font-bold text-slate-800 text-base">No Menu Items Available</h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  Zuraiz Special has no items in the menu currently. Go to the "Menu Setup" tab to add your custom dishes!
+                  Royal India By Spicy Twist has no items in the menu currently. Go to the "Menu Setup" tab to add your custom dishes!
                 </p>
               </div>
             ) : (
@@ -2609,7 +2551,7 @@
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
             <div className="text-center border-b border-dashed border-slate-200 pb-4">
-              <h2 className="text-lg font-extrabold text-slate-900">ZURAIZ SPECIAL</h2>
+              <h2 className="text-lg font-extrabold text-slate-900">ROYAL INDIA BY SPICY TWIST</h2>
               <p className="text-xs text-slate-500">{branch?.name || 'Main Branch'}</p>
               <p className="text-[10px] text-slate-400">{branch?.address}</p>
               <p className="text-[10px] text-slate-400">Phone: {branch?.phone}</p>

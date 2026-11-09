@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,87 +98,6 @@
 
   <script type="text/babel">
     const { useState, useMemo, useEffect, useRef } = React;
-    const APPS_SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbwIN-1Kzc_BqShyPgWgTzZENStAV5mVHOiZcw3KJuaX8WTunIFFxGMSX6FEGnWSO2rG/exec';
-
-async function googleSheetsGet() {
-  const response = await fetch(APPS_SCRIPT_URL);
-
-  if (!response.ok) {
-    throw new Error('Google Sheets data load failed.');
-  }
-
-  const payload = await response.json();
-
-  if (!payload.ok) {
-    throw new Error(payload.error || 'Google Sheets error.');
-  }
-
-  return payload.data;
-}
-
-async function googleSheetsPost(body) {
-  const response = await fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    throw new Error('Google Sheets save failed.');
-  }
-
-  const payload = await response.json();
-
-  if (!payload.ok) {
-    throw new Error(payload.error || 'Google Sheets save error.');
-  }
-
-  return payload.data;
-}
-
-const SHEET_STATE_MAP = {
-  Branches: 'branches',
-  Users: 'users',
-  Menu: 'menuItems',
-  Orders: 'orders',
-  Inventory: 'inventory',
-  Customers: 'customers',
-  GiftCards: 'giftCards',
-  Promos: 'promos',
-  Reservations: 'reservations',
-  Shifts: 'shifts',
-  Attendance: 'attendance',
-  Recipes: 'recipes',
-  VoidLogs: 'voidLogs',
-  WasteLogs: 'wasteLogs',
-  Register: 'registerState'
-};
-
-function convertSheetsDataToAppState(data) {
-  const result = {};
-
-  Object.entries(SHEET_STATE_MAP).forEach(([sheetName, stateName]) => {
-    const records = data?.[sheetName] || [];
-
-    if (stateName === 'registerState') {
-      result[stateName] = records[0] || {
-        id: 'register',
-        isOpen: true,
-        openingBalance: 10000,
-        currentCash: 10000,
-        cashDrops: [],
-        updatedAt: new Date().toISOString()
-      };
-    } else {
-      result[stateName] = records;
-    }
-  });
-
-  return result;
-}
 
     // --- CLEAN INITIAL DATA FOR ROYAL INDIA BY SPICY TWIST ---
     const INITIAL_BRANCHES = [

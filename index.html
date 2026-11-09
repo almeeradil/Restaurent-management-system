@@ -12,6 +12,9 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <!-- Babel Compiler for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Firebase Realtime Database -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Custom Font -->
@@ -29,7 +32,21 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useMemo, useEffect } = React;
+    const { useState, useMemo, useEffect, useRef } = React;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDcvhLQVBriyVP_MhwXh_5Yfi_1M7Yvccc",
+      authDomain: "restaurentmanagement-b6581.firebaseapp.com",
+      databaseURL: "https://restaurentmanagement-b6581-default-rtdb.firebaseio.com",
+      projectId: "restaurentmanagement-b6581",
+      storageBucket: "restaurentmanagement-b6581.firebasestorage.app",
+      messagingSenderId: "422879769576",
+      appId: "1:422879769576:web:0a2c5431e6146ee2882a5d",
+      measurementId: "G-M0EHGXET11"
+    };
+    const firebaseDatabase = window.firebase
+      ? (window.firebase.apps.length ? window.firebase.app() : window.firebase.initializeApp(firebaseConfig)).database()
+      : null;
 
     // --- CLEAN INITIAL DATA FOR ZURAIZ SPECIAL ---
     const INITIAL_BRANCHES = [
@@ -107,7 +124,8 @@
       const [users, setUsers] = useState(INITIAL_USERS);
       const [currentUser, setCurrentUser] = useState(INITIAL_USERS[0]);
       const [menuItems, setMenuItems] = useState(INITIAL_MENU);
-      const [orders, setOrders] = useState(INITIAL_ORDERS);
+      const [orders, setOrdersState] = useState(INITIAL_ORDERS);
+      const ordersRef = useRef(INITIAL_ORDERS);
       const [inventory, setInventory] = useState(INITIAL_INVENTORY);
       const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
       const [giftCards, setGiftCards] = useState(INITIAL_GIFT_CARDS);
@@ -125,6 +143,10 @@
 
       const [activeTab, setActiveTab] = useState('dashboard');
       const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+      const [isAuthenticated, setIsAuthenticated] = useState(false);
+      const [loginEmail, setLoginEmail] = useState('');
+      const [loginPassword, setLoginPassword] = useState('');
+      const [loginError, setLoginError] = useState('');
       const [toasts, setToasts] = useState([]);
       const [notifications, setNotifications] = useState([
         { id: 1, title: 'Zuraiz Special System Online', msg: 'All PKR (Rs.) reporting and multi-branch tools ready!', time: 'Just now', unread: true }
@@ -142,6 +164,50 @@
           setToasts((prev) => prev.filter((t) => t.id !== id));
         }, 3500);
       };
+
+      const setOrders = (update) => {
+        const previousOrders = ordersRef.current;
+        const nextOrders = typeof update === 'function' ? update(previousOrders) : update;
+        ordersRef.current = nextOrders;
+        setOrdersState(nextOrders);
+
+        if (!firebaseDatabase) return;
+        const previousById = new Map(previousOrders.map((order) => [order.id, order]));
+        const nextById = new Map(nextOrders.map((order) => [order.id, order]));
+        nextById.forEach((order, id) => {
+          if (JSON.stringify(previousById.get(id)) !== JSON.stringify(order)) {
+            firebaseDatabase.ref(`orders/${id}`).set(order).catch(() => {
+              showToast('Order could not be saved to the shared database.', 'error');
+            });
+          }
+        });
+        previousById.forEach((_, id) => {
+          if (!nextById.has(id)) {
+            firebaseDatabase.ref(`orders/${id}`).remove().catch(() => {
+              showToast('Order could not be removed from the shared database.', 'error');
+            });
+          }
+        });
+      };
+
+      useEffect(() => {
+        if (!firebaseDatabase) {
+          showToast('Firebase did not load. Orders will not sync between devices.', 'error');
+          return undefined;
+        }
+        const ordersRefInDatabase = firebaseDatabase.ref('orders');
+        const handleOrders = (snapshot) => {
+          const data = snapshot.val();
+          const remoteOrders = data ? Object.values(data).filter(Boolean) : [];
+          ordersRef.current = remoteOrders;
+          setOrdersState(remoteOrders);
+        };
+        const handleDatabaseError = () => {
+          showToast('Cannot access Firebase orders. Check your Realtime Database rules.', 'error');
+        };
+        ordersRefInDatabase.on('value', handleOrders, handleDatabaseError);
+        return () => ordersRefInDatabase.off('value', handleOrders);
+      }, []);
 
       // Branch Selector Filter helper
       const filteredOrders = useMemo(() => {
@@ -162,6 +228,66 @@
       const markNotificationsRead = () => {
         setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
       };
+
+      const handleLogin = (event) => {
+        event.preventDefault();
+        if (loginEmail.trim().toLowerCase() === 'admin@gmail.com' && loginPassword === 'aefaefzefzef') {
+          setIsAuthenticated(true);
+          setLoginError('');
+          setLoginPassword('');
+          return;
+        }
+        setLoginError('Email or password is incorrect. Please try again.');
+        setLoginPassword('');
+      };
+
+      if (!isAuthenticated) {
+        return (
+          <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 sm:p-8">
+            <div className="w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid lg:grid-cols-2">
+              <section className="relative hidden min-h-[600px] flex-col justify-between overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-rose-700 p-10 text-white lg:flex">
+                <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border-[40px] border-white/10"></div>
+                <div className="absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-white/10 blur-2xl"></div>
+                <div className="relative flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-xl font-black">Z</div>
+                  <div><p className="font-extrabold tracking-wide">ZURAIZ SPECIAL</p><p className="text-xs text-orange-100">Restaurant management</p></div>
+                </div>
+                <div className="relative max-w-md">
+                  <p className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-orange-100">Welcome back</p>
+                  <h1 className="text-4xl font-extrabold leading-tight">Everything your restaurant needs, in one place.</h1>
+                  <p className="mt-5 text-sm leading-6 text-orange-50">Manage orders, branches, staff and daily performance from your secure workspace.</p>
+                </div>
+                <p className="relative text-xs text-orange-100">Secure access · Multi-branch operations · PKR reporting</p>
+              </section>
+
+              <section className="flex min-h-[600px] flex-col justify-center px-6 py-12 sm:px-12 lg:px-14">
+                <div className="mb-10 lg:hidden">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500 text-xl font-black text-white shadow-lg shadow-orange-500/25">Z</div>
+                  <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-orange-600">Zuraiz Special</p>
+                </div>
+                <div className="mb-8">
+                  <p className="text-sm font-semibold text-orange-600">ADMIN PORTAL</p>
+                  <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Sign in to your account</h2>
+                  <p className="mt-2 text-sm text-slate-500">Enter your administrator credentials to continue.</p>
+                </div>
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div>
+                    <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-slate-700">Email address</label>
+                    <input id="login-email" type="email" autoComplete="username" required value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} placeholder="admin@gmail.com" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100" />
+                  </div>
+                  <div>
+                    <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-slate-700">Password</label>
+                    <input id="login-password" type="password" autoComplete="current-password" required value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} placeholder="Enter your password" className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100" />
+                  </div>
+                  {loginError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{loginError}</p>}
+                  <button type="submit" className="w-full rounded-xl bg-orange-500 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200">Sign in securely</button>
+                </form>
+                <p className="mt-8 text-center text-xs text-slate-400">Authorized administrator access only</p>
+              </section>
+            </div>
+          </div>
+        );
+      }
 
       return (
         <div className="flex h-screen bg-slate-100 text-slate-800 font-sans overflow-hidden">
@@ -355,6 +481,18 @@
                     </div>
                   )}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAuthenticated(false);
+                    setLoginEmail('');
+                    setLoginPassword('');
+                    setLoginError('');
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                >
+                  Log out
+                </button>
               </div>
             </header>
 

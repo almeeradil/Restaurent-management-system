@@ -26,6 +26,75 @@
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    @media (max-width: 767px) {
+      .app-sidebar {
+        position: fixed !important;
+        inset: 0 auto 0 0;
+        width: 16rem !important;
+        max-width: calc(100vw - 3rem);
+        z-index: 40 !important;
+        transition: transform 0.25s ease;
+      }
+      .app-sidebar.mobile-nav-closed { transform: translateX(-100%); }
+      .app-sidebar.mobile-nav-open { transform: translateX(0); }
+      .app-sidebar > div > div:first-child > button { display: none; }
+      .mobile-nav-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 35;
+        padding: 0;
+        border: 0;
+        background: rgb(15 23 42 / 55%);
+      }
+      #root .min-h-screen section { min-height: auto; }
+      #root > div > div.flex-1 { min-width: 0; }
+      #root header { min-height: 4rem; height: auto; padding: 0.65rem 0.75rem; gap: 0.5rem; }
+      #root header > div:first-child { min-width: 0; gap: 0.5rem; }
+      #root header h2 { font-size: 0.9rem; white-space: nowrap; }
+      #root header > div:first-child > div.relative { min-width: 0; }
+      #root header select { max-width: 8.5rem; font-size: 0.7rem; }
+      #root header > div:first-child > div.relative > div { gap: 0.25rem; padding: 0.35rem 0.45rem; }
+      #root header > div:first-child > div.relative > div > span { display: none; }
+      #root header > div:last-child { gap: 0.4rem; }
+      #root header > div:last-child > button { padding: 0.45rem 0.55rem; }
+      #root main { padding: 0.75rem 0.75rem 5.5rem; }
+      #root main table { display: block; width: 100%; overflow-x: auto; white-space: nowrap; }
+      #root main .grid { min-width: 0; }
+      #root main input, #root main select, #root main button { max-width: 100%; }
+      .mobile-bottom-nav {
+        position: fixed;
+        inset: auto 0 0;
+        z-index: 30;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        padding: 0.4rem 0.25rem calc(0.4rem + env(safe-area-inset-bottom));
+        border-top: 1px solid #e2e8f0;
+        background: rgb(255 255 255 / 96%);
+        box-shadow: 0 -6px 20px rgb(15 23 42 / 8%);
+        backdrop-filter: blur(12px);
+      }
+      .mobile-bottom-nav button {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.2rem;
+        padding: 0.25rem 0.1rem;
+        color: #64748b;
+        font-size: 0.65rem;
+        font-weight: 700;
+      }
+      .mobile-bottom-nav button.active { color: #ea580c; }
+    }
+
+    @media (max-width: 420px) {
+      #root header h2 { max-width: 6.5rem; overflow: hidden; text-overflow: ellipsis; }
+      #root header select { max-width: 6.5rem; }
+      #root header > div:last-child > button:last-child { font-size: 0; }
+      #root header > div:last-child > button:last-child::after { content: 'Out'; font-size: 0.7rem; }
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased overflow-hidden">
@@ -105,6 +174,16 @@
     const INITIAL_MENU = [];
     const INITIAL_ORDERS = [];
     const INITIAL_INVENTORY = [];
+    const BACKUP_STORAGE_KEY = 'zuraiz-special-backup';
+    const BACKUP_ARRAY_KEYS = ['branches', 'users', 'menuItems', 'orders', 'inventory', 'customers', 'giftCards', 'promos', 'reservations', 'shifts', 'attendance', 'recipes', 'voidLogs', 'wasteLogs'];
+    const SAVED_BACKUP = (() => {
+      try {
+        const saved = JSON.parse(window.localStorage.getItem(BACKUP_STORAGE_KEY) || 'null');
+        return saved?.version === 1 && saved.data ? saved.data : null;
+      } catch (error) {
+        return null;
+      }
+    })();
 
     // Icon helper component for rendering lucide icons dynamically in browser environment
     function Icon({ name, className = "w-5 h-5", ...props }) {
@@ -119,30 +198,33 @@
 
     function App() {
       // --- GLOBAL STATE ---
-      const [branches, setBranches] = useState(INITIAL_BRANCHES);
-      const [selectedBranchId, setSelectedBranchId] = useState('all');
-      const [users, setUsers] = useState(INITIAL_USERS);
-      const [currentUser, setCurrentUser] = useState(INITIAL_USERS[0]);
-      const [menuItems, setMenuItems] = useState(INITIAL_MENU);
-      const [orders, setOrdersState] = useState(INITIAL_ORDERS);
-      const ordersRef = useRef(INITIAL_ORDERS);
-      const [inventory, setInventory] = useState(INITIAL_INVENTORY);
-      const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
-      const [giftCards, setGiftCards] = useState(INITIAL_GIFT_CARDS);
-      const [promos, setPromos] = useState(INITIAL_PROMOS);
-      const [reservations, setReservations] = useState(INITIAL_RESERVATIONS);
-      const [shifts, setShifts] = useState(INITIAL_SHIFTS);
-      const [attendance, setAttendance] = useState(INITIAL_ATTENDANCE);
-      const [recipes, setRecipes] = useState(INITIAL_RECIPES);
-      const [voidLogs, setVoidLogs] = useState(INITIAL_VOID_LOGS);
-      const [wasteLogs, setWasteLogs] = useState(INITIAL_WASTE_LOGS);
+      const [branches, setBranches] = useState(SAVED_BACKUP?.branches || INITIAL_BRANCHES);
+      const [selectedBranchId, setSelectedBranchId] = useState(SAVED_BACKUP?.selectedBranchId || 'all');
+      const [users, setUsers] = useState(SAVED_BACKUP?.users || INITIAL_USERS);
+      const [currentUser, setCurrentUser] = useState(SAVED_BACKUP?.users?.find((user) => user.id === SAVED_BACKUP.currentUserId) || INITIAL_USERS[0]);
+      const [menuItems, setMenuItems] = useState(SAVED_BACKUP?.menuItems || INITIAL_MENU);
+      const [orders, setOrdersState] = useState(SAVED_BACKUP?.orders || INITIAL_ORDERS);
+      const ordersRef = useRef(SAVED_BACKUP?.orders || INITIAL_ORDERS);
+      const [inventory, setInventory] = useState(SAVED_BACKUP?.inventory || INITIAL_INVENTORY);
+      const [customers, setCustomers] = useState(SAVED_BACKUP?.customers || INITIAL_CUSTOMERS);
+      const [giftCards, setGiftCards] = useState(SAVED_BACKUP?.giftCards || INITIAL_GIFT_CARDS);
+      const [promos, setPromos] = useState(SAVED_BACKUP?.promos || INITIAL_PROMOS);
+      const [reservations, setReservations] = useState(SAVED_BACKUP?.reservations || INITIAL_RESERVATIONS);
+      const [shifts, setShifts] = useState(SAVED_BACKUP?.shifts || INITIAL_SHIFTS);
+      const [attendance, setAttendance] = useState(SAVED_BACKUP?.attendance || INITIAL_ATTENDANCE);
+      const [recipes, setRecipes] = useState(SAVED_BACKUP?.recipes || INITIAL_RECIPES);
+      const [voidLogs, setVoidLogs] = useState(SAVED_BACKUP?.voidLogs || INITIAL_VOID_LOGS);
+      const [wasteLogs, setWasteLogs] = useState(SAVED_BACKUP?.wasteLogs || INITIAL_WASTE_LOGS);
+      const [registerState, setRegisterState] = useState(SAVED_BACKUP?.registerState || { isOpen: true, openingBalance: 10000, cashDrops: [], currentCash: 10000 });
+      const backupFileInputRef = useRef(null);
+      const [restoreMessage, setRestoreMessage] = useState('');
       
       // Cash Register State
-      const [registerState, setRegisterState] = useState({ isOpen: true, openingBalance: 10000, cashDrops: [], currentCash: 10000 });
       const [showZReportModal, setShowZReportModal] = useState(false);
 
       const [activeTab, setActiveTab] = useState('dashboard');
       const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+      const [mobileNavOpen, setMobileNavOpen] = useState(false);
       const [isAuthenticated, setIsAuthenticated] = useState(false);
       const [loginEmail, setLoginEmail] = useState('');
       const [loginPassword, setLoginPassword] = useState('');
@@ -152,6 +234,10 @@
         { id: 1, title: 'Zuraiz Special System Online', msg: 'All PKR (Rs.) reporting and multi-branch tools ready!', time: 'Just now', unread: true }
       ]);
       const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+
+      useEffect(() => {
+        setMobileNavOpen(false);
+      }, [activeTab]);
 
       // Modals state
       const [receiptModalOrder, setReceiptModalOrder] = useState(null);
@@ -188,6 +274,62 @@
             });
           }
         });
+      };
+
+      const getBackupData = () => ({
+        branches, users, menuItems, orders, inventory, customers, giftCards, promos,
+        reservations, shifts, attendance, recipes, voidLogs, wasteLogs, registerState,
+        selectedBranchId, currentUserId: currentUser.id
+      });
+
+      const handleExportBackup = () => {
+        const backup = { app: 'Zuraiz Special', version: 1, exportedAt: new Date().toISOString(), data: getBackupData() };
+        const file = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `zuraiz-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast('JSON backup downloaded successfully.', 'success');
+      };
+
+      const handleRestoreBackup = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+          const backup = JSON.parse(await file.text());
+          const data = backup?.version === 1 ? backup.data : null;
+          if (!data || !BACKUP_ARRAY_KEYS.every((key) => Array.isArray(data[key])) || !data.registerState || !Array.isArray(data.registerState.cashDrops)) {
+            throw new Error('Invalid backup structure');
+          }
+          const savedBackup = { app: 'Zuraiz Special', version: 1, exportedAt: backup.exportedAt || new Date().toISOString(), data };
+          window.localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(savedBackup));
+          setBranches(data.branches);
+          setUsers(data.users);
+          setMenuItems(data.menuItems);
+          setOrders(data.orders);
+          setInventory(data.inventory);
+          setCustomers(data.customers);
+          setGiftCards(data.giftCards);
+          setPromos(data.promos);
+          setReservations(data.reservations);
+          setShifts(data.shifts);
+          setAttendance(data.attendance);
+          setRecipes(data.recipes);
+          setVoidLogs(data.voidLogs);
+          setWasteLogs(data.wasteLogs);
+          setRegisterState(data.registerState);
+          setSelectedBranchId(data.selectedBranchId || 'all');
+          const restoredUser = data.users.find((user) => user.id === data.currentUserId);
+          if (restoredUser) setCurrentUser(restoredUser);
+          setRestoreMessage('Backup restored. Sign in to continue with your restored data.');
+          setLoginError('');
+        } catch (error) {
+          setRestoreMessage('');
+          setLoginError('Could not restore this file. Please choose a valid Zuraiz JSON backup.');
+        }
+        event.target.value = '';
       };
 
       useEffect(() => {
@@ -282,6 +424,11 @@
                   {loginError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{loginError}</p>}
                   <button type="submit" className="w-full rounded-xl bg-orange-500 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200">Sign in securely</button>
                 </form>
+                <input ref={backupFileInputRef} type="file" accept=".json,application/json" onChange={handleRestoreBackup} className="hidden" />
+                <button type="button" onClick={() => backupFileInputRef.current?.click()} className="mt-4 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-orange-400 hover:bg-orange-50">
+                  Restore data from JSON backup
+                </button>
+                {restoreMessage && <p role="status" className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{restoreMessage}</p>}
                 <p className="mt-8 text-center text-xs text-slate-400">Authorized administrator access only</p>
               </section>
             </div>
@@ -312,7 +459,7 @@
 
           {/* --- SIDEBAR --- */}
           <aside
-            className={`${
+            className={`app-sidebar ${mobileNavOpen ? 'mobile-nav-open' : 'mobile-nav-closed'} ${
               sidebarCollapsed ? 'w-20' : 'w-64'
             } bg-white border-r border-slate-200 flex flex-col justify-between transition-all duration-300 z-30 relative shadow-sm`}
           >
@@ -396,12 +543,50 @@
               </div>
             </div>
           </aside>
+          {mobileNavOpen && (
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              onClick={() => setMobileNavOpen(false)}
+              className="mobile-nav-backdrop md:hidden"
+            />
+          )}
+
+          {/* Persistent mobile navigation; the sidebar menu remains available above. */}
+          <nav aria-label="Mobile navigation" className="mobile-bottom-nav md:hidden">
+            <button type="button" onClick={() => setActiveTab('dashboard')} className={activeTab === 'dashboard' ? 'active' : ''} aria-current={activeTab === 'dashboard' ? 'page' : undefined}>
+              <Icon name="layout-dashboard" className="w-5 h-5" /><span>Home</span>
+            </button>
+            <button type="button" onClick={() => setActiveTab('pos')} className={activeTab === 'pos' ? 'active' : ''} aria-current={activeTab === 'pos' ? 'page' : undefined}>
+              <Icon name="shopping-bag" className="w-5 h-5" /><span>POS</span>
+            </button>
+            <button type="button" onClick={() => setActiveTab('orders')} className={activeTab === 'orders' ? 'active' : ''} aria-current={activeTab === 'orders' ? 'page' : undefined}>
+              <Icon name="clipboard-list" className="w-5 h-5" /><span>Orders</span>
+            </button>
+            <button type="button" onClick={() => setActiveTab('kds')} className={activeTab === 'kds' ? 'active' : ''} aria-current={activeTab === 'kds' ? 'page' : undefined}>
+              <Icon name="utensils-crossed" className="w-5 h-5" /><span>Kitchen</span>
+            </button>
+            <button type="button" onClick={() => { setSidebarCollapsed(false); setMobileNavOpen(true); }}>
+              <Icon name="menu" className="w-5 h-5" /><span>Menu</span>
+            </button>
+          </nav>
 
           {/* --- MAIN CONTENT CONTAINER --- */}
           <div className="flex-1 flex flex-col h-screen overflow-hidden">
             {/* --- HEADER NAVBAR --- */}
             <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shadow-sm shrink-0">
               <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  aria-label="Open navigation menu"
+                  onClick={() => {
+                    setSidebarCollapsed(false);
+                    setMobileNavOpen(true);
+                  }}
+                  className="md:hidden rounded-lg bg-slate-100 p-2 text-slate-700"
+                >
+                  <Icon name="menu" className="w-4 h-4" />
+                </button>
                 <h2 className="text-lg font-bold text-slate-900 capitalize">
                   {activeTab.replace('_', ' ')}
                 </h2>
@@ -498,7 +683,7 @@
 
             {/* --- DYNAMIC MODULE CONTENT BODY --- */}
             <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
-              {activeTab === 'dashboard' && <DashboardModule orders={filteredOrders} inventory={filteredInventory} branches={branches} selectedBranchId={selectedBranchId} menuItems={menuItems} />}
+              {activeTab === 'dashboard' && <DashboardModule orders={filteredOrders} inventory={filteredInventory} branches={branches} selectedBranchId={selectedBranchId} menuItems={menuItems} onExportBackup={handleExportBackup} />}
               {activeTab === 'pos' && <POSModule menuItems={filteredMenu} setMenuItems={setMenuItems} selectedBranchId={selectedBranchId} branches={branches} orders={orders} setOrders={setOrders} setRegisterState={setRegisterState} showToast={showToast} setReceiptModalOrder={setReceiptModalOrder} promos={promos} giftCards={giftCards} setGiftCards={setGiftCards} />}
               {activeTab === 'kds' && <KDSModule orders={filteredOrders} setOrders={setOrders} showToast={showToast} branches={branches} />}
               {activeTab === 'orders' && <OrderManagementModule orders={filteredOrders} setOrders={setOrders} branches={branches} menuItems={menuItems} setReceiptModalOrder={setReceiptModalOrder} showToast={showToast} selectedBranchId={selectedBranchId} voidLogs={voidLogs} setVoidLogs={setVoidLogs} currentUser={currentUser} />}
@@ -538,7 +723,7 @@
     // ==========================================
     // MODULE 1: DASHBOARD OVERVIEW (8 KPI CARDS + 8 ANALYTICAL CHARTS)
     // ==========================================
-    function DashboardModule({ orders, inventory, branches, selectedBranchId, menuItems }) {
+    function DashboardModule({ orders, inventory, branches, selectedBranchId, menuItems, onExportBackup }) {
       const totalRevenue = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + Number(o.total_amount), 0);
       const totalOrders = orders.length;
       const activeDineIn = orders.filter((o) => o.order_type === 'Dine-in' && o.status !== 'Completed' && o.status !== 'Cancelled').length;
@@ -612,10 +797,13 @@
                 Real-time multi-branch financial metrics in <span className="text-orange-600 font-bold">Pakistani Rupees (Rs.)</span>
               </p>
             </div>
-            <div className="mt-4 sm:mt-0 flex items-center gap-2">
+            <div className="mt-4 sm:mt-0 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Zuraiz Special PKR Live
               </span>
+              <button type="button" onClick={onExportBackup} className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-md shadow-orange-500/20 transition hover:bg-orange-600">
+                <Icon name="download" className="w-4 h-4" /> Export Backup
+              </button>
             </div>
           </div>
 
@@ -1687,12 +1875,6 @@
                 </select>
               </div>
             )}
-
-            <div className="flex justify-end">
-              <button type="button" onClick={openAddProduct} className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600">
-                <Icon name="plus" className="w-4 h-4" /> Add Product
-              </button>
-            </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">

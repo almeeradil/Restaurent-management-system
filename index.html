@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -95,7 +96,8 @@
           window.lucide.createIcons();
         }
       }, [name]);
-      return <i data-lucide={name} className={className} {...props}></i>;
+      // Keep Lucide's DOM replacement inside a wrapper React can safely remove.
+      return <span className="contents" aria-hidden="true"><i data-lucide={name} className={className} {...props}></i></span>;
     }
 
     function App() {
@@ -131,12 +133,6 @@
 
       // Modals state
       const [receiptModalOrder, setReceiptModalOrder] = useState(null);
-
-      useEffect(() => {
-        if (window.lucide) {
-          window.lucide.createIcons();
-        }
-      });
 
       // Toast Notification Helper
       const showToast = (message, type = 'success') => {
@@ -365,7 +361,7 @@
             {/* --- DYNAMIC MODULE CONTENT BODY --- */}
             <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
               {activeTab === 'dashboard' && <DashboardModule orders={filteredOrders} inventory={filteredInventory} branches={branches} selectedBranchId={selectedBranchId} menuItems={menuItems} />}
-              {activeTab === 'pos' && <POSModule menuItems={filteredMenu} selectedBranchId={selectedBranchId} branches={branches} orders={orders} setOrders={setOrders} showToast={showToast} setReceiptModalOrder={setReceiptModalOrder} promos={promos} giftCards={giftCards} />}
+              {activeTab === 'pos' && <POSModule menuItems={filteredMenu} setMenuItems={setMenuItems} selectedBranchId={selectedBranchId} branches={branches} orders={orders} setOrders={setOrders} setRegisterState={setRegisterState} showToast={showToast} setReceiptModalOrder={setReceiptModalOrder} promos={promos} giftCards={giftCards} setGiftCards={setGiftCards} />}
               {activeTab === 'kds' && <KDSModule orders={filteredOrders} setOrders={setOrders} showToast={showToast} branches={branches} />}
               {activeTab === 'orders' && <OrderManagementModule orders={filteredOrders} setOrders={setOrders} branches={branches} menuItems={menuItems} setReceiptModalOrder={setReceiptModalOrder} showToast={showToast} selectedBranchId={selectedBranchId} voidLogs={voidLogs} setVoidLogs={setVoidLogs} currentUser={currentUser} />}
               {activeTab === 'register' && <CashRegisterModule registerState={registerState} setRegisterState={setRegisterState} orders={filteredOrders} showToast={showToast} setShowZReportModal={setShowZReportModal} />}
@@ -726,10 +722,9 @@
     // ==========================================
     function SalesReportsModule({ orders, voidLogs, branches }) {
       const activeOrders = orders.filter((o) => o.status !== 'Cancelled');
-      const grossSales = activeOrders.reduce((sum, o) => sum + o.total_amount, 0);
-      const totalGST = grossSales * 0.16; // 16% GST in Pakistan
-      const cgst = totalGST / 2;
-      const sgst = totalGST / 2;
+      const grossSales = activeOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+      // Order totals already include 16% GST, so extract the tax portion from gross.
+      const totalGST = grossSales * (16 / 116);
       const netSales = grossSales - totalGST;
 
       return (
@@ -750,7 +745,7 @@
               <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl">
                 <span className="text-xs font-bold text-amber-800">Total GST Tax (16%)</span>
                 <h3 className="text-xl font-extrabold text-amber-900 mt-1">Rs. {totalGST.toLocaleString(undefined, {maximumFractionDigits: 0})}</h3>
-                <p className="text-[10px] text-amber-700 mt-1">CGST: Rs. {cgst.toFixed(0)} | SGST: Rs. {sgst.toFixed(0)}</p>
+                <p className="text-[10px] text-amber-700 mt-1">Tax extracted from GST-inclusive sales</p>
               </div>
               <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl">
                 <span className="text-xs font-bold text-rose-800">Void & Refunded Logs</span>
@@ -802,7 +797,7 @@
     function LaborReportModule({ orders, attendance, wasteLogs, setWasteLogs, branches, showToast }) {
       const [wasteForm, setWasteForm] = useState({ ingredient: '', qty: '', cost: '', reason: '' });
       const grossSales = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + o.total_amount, 0);
-      const totalLaborHours = attendance.reduce((sum, a) => sum + a.totalHours, 0);
+      const totalLaborHours = attendance.reduce((sum, a) => sum + Number(a.totalHours || 0), 0);
       const estimatedLaborCost = totalLaborHours * 750; // Average Rs. 750 / hr
       const totalWasteCost = wasteLogs.reduce((sum, w) => sum + Number(w.cost), 0);
       const estimatedCOGS = grossSales * 0.32; // Estimated 32% food cost
@@ -886,11 +881,16 @@
       const [cashDropAmt, setCashDropAmt] = useState('');
 
       const handleCashDrop = () => {
-        if (!cashDropAmt || Number(cashDropAmt) <= 0) return;
+        const amount = Number(cashDropAmt);
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        if (amount > registerState.currentCash) {
+          showToast('Cash drop cannot exceed the drawer balance.', 'error');
+          return;
+        }
         setRegisterState((prev) => ({
           ...prev,
-          cashDrops: [...prev.cashDrops, { id: Date.now(), amount: Number(cashDropAmt), time: new Date().toLocaleTimeString() }],
-          currentCash: prev.currentCash - Number(cashDropAmt)
+          cashDrops: [...prev.cashDrops, { id: Date.now(), amount, time: new Date().toLocaleTimeString() }],
+          currentCash: prev.currentCash - amount
         }));
         showToast(`Cash drop of Rs. ${cashDropAmt} recorded!`, 'success');
         setCashDropAmt('');
@@ -938,7 +938,8 @@
 
     function ZReportModal({ registerState, orders, onClose }) {
       const activeOrders = orders.filter((o) => o.status !== 'Cancelled');
-      const grossSales = activeOrders.reduce((sum, o) => sum + o.total_amount, 0);
+      const cashSales = activeOrders.filter((o) => o.payment_method === 'Cash').reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+      const expectedCash = registerState.openingBalance + cashSales - registerState.cashDrops.reduce((sum, drop) => sum + Number(drop.amount || 0), 0);
 
       return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
@@ -951,11 +952,12 @@
 
             <div className="text-xs space-y-2 text-slate-700">
               <div className="flex justify-between"><span>Opening Cash Float:</span><span className="font-bold">Rs. {registerState.openingBalance}</span></div>
-              <div className="flex justify-between"><span>Gross Shift Sales:</span><span className="font-bold text-orange-600">Rs. {grossSales.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>Cash Sales:</span><span className="font-bold text-orange-600">Rs. {cashSales.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>Cash Drops:</span><span className="font-bold">Rs. {registerState.cashDrops.reduce((sum, drop) => sum + Number(drop.amount || 0), 0).toLocaleString()}</span></div>
               <div className="flex justify-between"><span>Total Orders Processed:</span><span className="font-bold">{activeOrders.length}</span></div>
               <div className="flex justify-between border-t border-dashed border-slate-200 pt-2 font-extrabold text-slate-900">
                 <span>Expected Cash In Drawer:</span>
-                <span className="text-emerald-600">Rs. {(registerState.openingBalance + grossSales).toLocaleString()}</span>
+                <span className="text-emerald-600">Rs. {expectedCash.toLocaleString()}</span>
               </div>
             </div>
 
@@ -1250,7 +1252,7 @@
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {users.map((u) => {
-                  const hours = attendance.filter((a) => a.userId === u.id).reduce((sum, a) => sum + a.totalHours, 8.5);
+                  const hours = attendance.filter((a) => a.userId === u.id).reduce((sum, a) => sum + Number(a.totalHours || 0), 0);
                   const rate = u.hourly_rate || 500;
                   const grossWage = hours * rate;
                   return (
@@ -1307,20 +1309,97 @@
     // ==========================================
     // MODULE 2: POINT OF SALE (POS) & BILLING (PKR & GIFT CARDS)
     // ==========================================
-    function POSModule({ menuItems, selectedBranchId, branches, orders, setOrders, showToast, setReceiptModalOrder, promos, giftCards }) {
+    function POSModule({ menuItems, setMenuItems, selectedBranchId, branches, orders, setOrders, setRegisterState, showToast, setReceiptModalOrder, promos, giftCards, setGiftCards }) {
       const [cart, setCart] = useState([]);
+      const [openItemMenuId, setOpenItemMenuId] = useState(null);
+      const [productModalOpen, setProductModalOpen] = useState(false);
+      const [editingProductId, setEditingProductId] = useState(null);
+      const [productForm, setProductForm] = useState({ name: '', category: 'BBQ', price: '', stock: '50' });
       const [selectedCategory, setSelectedCategory] = useState('All');
       const [searchQuery, setSearchQuery] = useState('');
       const [orderType, setOrderType] = useState('Dine-in');
       const [tableNumber, setTableNumber] = useState('T-01');
+      const [customerName, setCustomerName] = useState('');
+      const [customerPhone, setCustomerPhone] = useState('');
       const [paymentMethod, setPaymentMethod] = useState('Cash');
+      const [selectedGiftCardId, setSelectedGiftCardId] = useState('');
       const [discountPercent, setDiscountPercent] = useState(0);
+      const [fixedDiscount, setFixedDiscount] = useState(0);
       const [discountCode, setDiscountCode] = useState('');
       const [activeBranchForOrder, setActiveBranchForOrder] = useState(
         selectedBranchId !== 'all' ? selectedBranchId : branches[0]?.id || 'b1'
       );
 
-      const categories = ['All', 'Burgers', 'Pizzas', 'Starters', 'Drinks', 'Desserts'];
+      useEffect(() => {
+        if (selectedBranchId !== 'all') setActiveBranchForOrder(selectedBranchId);
+        else if (!branches.some((branch) => branch.id === activeBranchForOrder)) setActiveBranchForOrder(branches[0]?.id || 'b1');
+      }, [selectedBranchId, branches, activeBranchForOrder]);
+
+      const categories = ['All', 'BBQ', 'Karahi', 'Handi', 'Qorma', 'Rice', 'Tandoor & Breads', 'Burgers', 'Pizzas', 'Starters', 'Chinese', 'Pasta', 'Seafood', 'Deals', 'Drinks', 'Desserts'];
+
+      const openAddProduct = () => {
+        setEditingProductId(null);
+        setProductForm({ name: '', category: 'BBQ', price: '', stock: '50' });
+        setProductModalOpen(true);
+      };
+
+      const openEditProduct = (item) => {
+        setEditingProductId(item.id);
+        setProductForm({ name: item.name, category: item.category, price: String(item.price), stock: String(item.stock ?? 50) });
+        setOpenItemMenuId(null);
+        setProductModalOpen(true);
+      };
+
+      const saveProduct = (event) => {
+        event.preventDefault();
+        const name = String(productForm.name || '').trim();
+        const priceText = String(productForm.price || '').trim();
+        const stockText = String(productForm.stock ?? '').trim();
+        const price = Number(priceText);
+        const stock = Number(stockText);
+
+        if (!name) {
+          showToast('Please enter a product name.', 'error');
+          return;
+        }
+        if (!priceText || !Number.isFinite(price) || price <= 0) {
+          showToast('Please enter a price greater than zero.', 'error');
+          return;
+        }
+        if (!stockText || !Number.isInteger(stock) || stock < 0) {
+          showToast('Please enter a whole-number stock quantity of zero or more.', 'error');
+          return;
+        }
+
+        if (editingProductId) {
+          setMenuItems((prev) => prev.map((item) => item.id === editingProductId
+            ? { ...item, name, category: productForm.category, price, stock }
+            : item));
+          showToast('Product updated in the menu.', 'success');
+        } else {
+          const availability = selectedBranchId === 'all'
+            ? branches.map((branch) => branch.id)
+            : [selectedBranchId];
+          setMenuItems((prev) => [...prev, {
+            id: `menu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            name,
+            category: productForm.category,
+            price,
+            stock,
+            availability
+          }]);
+          showToast('Product added to the menu.', 'success');
+        }
+        setProductModalOpen(false);
+      };
+
+      const deleteProduct = (item) => {
+        if (!window.confirm(`Remove ${item.name} from the menu?`)) return;
+        setMenuItems((prev) => prev.filter((entry) => entry.id !== item.id));
+        setCart((prev) => prev.filter((entry) => entry.id !== item.id));
+        setOpenItemMenuId(null);
+        showToast('Product removed from the menu.', 'success');
+      };
 
       const filteredItems = menuItems.filter((item) => {
         const matchesCat = selectedCategory === 'All' || item.category === selectedCategory;
@@ -1330,9 +1409,18 @@
 
       const addToCart = (item) => {
         setCart((prev) => {
-          const existing = prev.find((i) => i.id === item.id);
+          const existing = prev.find((entry) => entry.id === item.id);
+          const stock = Number(item.stock ?? 50);
+          if (existing && existing.quantity >= stock) {
+            showToast(`Only ${stock} ${item.name} available.`, 'warning');
+            return prev;
+          }
+          if (!existing && stock < 1) {
+            showToast(`${item.name} is out of stock.`, 'warning');
+            return prev;
+          }
           if (existing) {
-            return prev.map((i) => (i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
+            return prev.map((entry) => (entry.id === item.id ? { ...entry, quantity: entry.quantity + 1 } : entry));
           }
           return [...prev, { ...item, quantity: 1, notes: '' }];
         });
@@ -1343,7 +1431,12 @@
           prev
             .map((item) => {
               if (item.id === id) {
+                const stock = Number(item.stock ?? 50);
                 const newQty = item.quantity + delta;
+                if (newQty > stock) {
+                  showToast(`Only ${stock} ${item.name} available.`, 'warning');
+                  return item;
+                }
                 return newQty > 0 ? { ...item, quantity: newQty } : null;
               }
               return item;
@@ -1357,19 +1450,19 @@
       };
 
       const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      const discountAmount = (subtotal * discountPercent) / 100;
+      const discountAmount = Math.min(subtotal, (subtotal * discountPercent) / 100 + fixedDiscount);
       const tax = (subtotal - discountAmount) * 0.16; // 16% Pakistani GST
       const grandTotal = subtotal - discountAmount + tax;
 
       const applyDiscount = () => {
-        const foundPromo = promos.find((p) => p.code === discountCode.toUpperCase() && p.status === 'Active');
+        const foundPromo = promos.find((p) => p.code === discountCode.trim().toUpperCase() && p.status === 'Active');
         if (foundPromo) {
-          setDiscountPercent(foundPromo.value);
-          showToast(`${foundPromo.value}% Promo Discount Applied!`, 'success');
-        } else if (discountCode.toUpperCase() === 'PROMO10') {
-          setDiscountPercent(10);
-          showToast('10% Promo Discount Applied!', 'success');
+          setDiscountPercent(foundPromo.discountType === 'percentage' ? Math.min(100, Number(foundPromo.value) || 0) : 0);
+          setFixedDiscount(foundPromo.discountType === 'flat' ? Math.max(0, Number(foundPromo.value) || 0) : 0);
+          showToast(foundPromo.discountType === 'flat' ? `Rs. ${foundPromo.value} discount applied!` : `${foundPromo.value}% promo discount applied!`, 'success');
         } else {
+          setDiscountPercent(0);
+          setFixedDiscount(0);
           showToast('Invalid Promo Code', 'error');
         }
       };
@@ -1380,11 +1473,34 @@
           return;
         }
 
+        if (paymentMethod === 'Gift Card') {
+          const selectedGiftCard = giftCards.find((card) => card.id === selectedGiftCardId && card.status === 'Active');
+          if (!selectedGiftCard) {
+            showToast('Select an active gift card before checkout.', 'warning');
+            return;
+          }
+          if (Number(selectedGiftCard.balance) < grandTotal) {
+            showToast('Gift card balance is not enough to cover this order.', 'error');
+            return;
+          }
+        }
+
+        const unavailableItem = cart.find((cartItem) => {
+          const currentItem = menuItems.find((item) => item.id === cartItem.id);
+          return !currentItem || cartItem.quantity > Number(currentItem.stock ?? 50);
+        });
+        if (unavailableItem) {
+          showToast(`${unavailableItem.name} is no longer available in that quantity.`, 'error');
+          return;
+        }
+
         const newOrder = {
           id: `ord-${Date.now()}`,
           order_number: `#${Math.floor(1000 + Math.random() * 9000)}`,
           branch_id: activeBranchForOrder,
           table_number: tableNumber,
+          customer_name: customerName.trim(),
+          customer_phone: customerPhone.trim(),
           order_type: orderType,
           status: 'New Orders',
           items: cart,
@@ -1393,8 +1509,23 @@
           created_at: new Date().toISOString()
         };
 
-        setOrders([newOrder, ...orders]);
+        setOrders((prev) => [newOrder, ...prev]);
+        setMenuItems((prev) => prev.map((item) => {
+          const orderedItem = cart.find((entry) => entry.id === item.id);
+          return orderedItem
+            ? { ...item, stock: Math.max(0, Number(item.stock ?? 50) - orderedItem.quantity) }
+            : item;
+        }));
+        if (paymentMethod === 'Cash') {
+          setRegisterState((prev) => ({ ...prev, currentCash: prev.currentCash + newOrder.total_amount }));
+        } else if (paymentMethod === 'Gift Card') {
+          setGiftCards((prev) => prev.map((card) => card.id === selectedGiftCardId
+            ? { ...card, balance: Math.max(0, Number(card.balance) - newOrder.total_amount) }
+            : card));
+        }
         setCart([]);
+        setCustomerName('');
+        setCustomerPhone('');
         showToast(`Order ${newOrder.order_number} placed successfully!`, 'success');
         setReceiptModalOrder(newOrder);
       };
@@ -1418,6 +1549,12 @@
                 </select>
               </div>
             )}
+
+            <div className="flex justify-end">
+              <button type="button" onClick={openAddProduct} className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600">
+                <Icon name="plus" className="w-4 h-4" /> Add Product
+              </button>
+            </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
@@ -1472,15 +1609,38 @@
                       <span className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold text-orange-600 border border-slate-200 shadow-sm">
                         Rs. {item.price}
                       </span>
+                      <div className="absolute top-2 left-2" onClick={(event) => event.stopPropagation()}>
+                        <button
+                          type="button"
+                          aria-label={`More options for ${item.name}`}
+                          onClick={() => setOpenItemMenuId(openItemMenuId === item.id ? null : item.id)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/95 text-slate-700 shadow hover:bg-white"
+                        >
+                          <Icon name="more-vertical" className="w-4 h-4" />
+                        </button>
+                        {openItemMenuId === item.id && (
+                          <div className="absolute left-0 top-8 z-20 w-28 rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
+                            <button type="button" onClick={() => openEditProduct(item)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100">Edit</button>
+                            <button type="button" onClick={() => deleteProduct(item)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50">Delete</button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="p-3">
                       <h4 className="font-bold text-xs text-slate-800 line-clamp-1 group-hover:text-orange-600 transition">
                         {item.name}
                       </h4>
                       <div className="flex items-center justify-between mt-2 text-[11px] text-slate-500">
-                        <span>Stock: {item.stock || 50}</span>
-                        <button className="p-1.5 rounded-lg bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white transition font-bold">
-                          <Icon name="plus" className="w-3.5 h-3.5" />
+                        <span>Stock: {item.stock ?? 50}</span>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            addToCart(item);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg bg-orange-100 px-2 py-1.5 text-[10px] font-bold text-orange-600 transition hover:bg-orange-500 hover:text-white"
+                        >
+                          <Icon name="plus" className="w-3.5 h-3.5" /> Add item
                         </button>
                       </div>
                     </div>
@@ -1522,6 +1682,23 @@
                     className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-800 rounded-xl p-2 mt-1 focus:outline-none font-semibold"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Customer name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-800 rounded-xl p-2 focus:outline-none font-semibold"
+                />
+                <input
+                  type="tel"
+                  placeholder="Customer phone"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-800 rounded-xl p-2 focus:outline-none font-semibold"
+                />
               </div>
 
               <div className="space-y-3 max-h-56 overflow-y-auto pr-1 border-b border-slate-100 pb-3">
@@ -1589,9 +1766,9 @@
                   <span>Subtotal:</span>
                   <span>Rs. {subtotal.toLocaleString()}</span>
                 </div>
-                {discountPercent > 0 && (
+                {discountAmount > 0 && (
                   <div className="flex justify-between text-orange-600 font-bold">
-                    <span>Discount ({discountPercent}%):</span>
+                    <span>Discount{discountPercent > 0 ? ` (${discountPercent}%)` : ''}:</span>
                     <span>-Rs. {discountAmount.toLocaleString()}</span>
                   </div>
                 )}
@@ -1620,6 +1797,18 @@
                   </button>
                 ))}
               </div>
+              {paymentMethod === 'Gift Card' && (
+                <select
+                  value={selectedGiftCardId}
+                  onChange={(event) => setSelectedGiftCardId(event.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs font-semibold text-slate-800"
+                >
+                  <option value="">Select an active gift card</option>
+                  {giftCards.filter((card) => card.status === 'Active').map((card) => (
+                    <option key={card.id} value={card.id}>{card.code} — Rs. {Number(card.balance).toLocaleString()}</option>
+                  ))}
+                </select>
+              )}
 
               <button
                 onClick={handleCheckout}
@@ -1629,6 +1818,30 @@
               </button>
             </div>
           </div>
+          {productModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+              <form noValidate onSubmit={saveProduct} className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 className="font-bold text-slate-900">{editingProductId ? 'Edit Product' : 'Add Product to Menu'}</h3>
+                  <button type="button" onClick={() => setProductModalOpen(false)} aria-label="Close" className="text-slate-400 hover:text-slate-800">
+                    <Icon name="x" className="w-5 h-5" />
+                  </button>
+                </div>
+                <input required value={productForm.name} onChange={(event) => setProductForm({ ...productForm, name: event.target.value })} placeholder="Product name" className="w-full rounded-xl border border-slate-200 p-2.5 text-sm" />
+                <div className="grid grid-cols-2 gap-3">
+                  <select value={productForm.category} onChange={(event) => setProductForm({ ...productForm, category: event.target.value })} className="rounded-xl border border-slate-200 p-2.5 text-sm">
+                    {categories.filter((category) => category !== 'All').map((category) => <option key={category} value={category}>{category}</option>)}
+                  </select>
+                  <input required type="number" min="0.01" step="0.01" value={productForm.price} onChange={(event) => setProductForm({ ...productForm, price: event.target.value })} placeholder="Price (Rs.)" className="rounded-xl border border-slate-200 p-2.5 text-sm" />
+                </div>
+                <input required type="number" min="0" step="1" value={productForm.stock} onChange={(event) => setProductForm({ ...productForm, stock: event.target.value })} placeholder="Stock quantity" className="w-full rounded-xl border border-slate-200 p-2.5 text-sm" />
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setProductModalOpen(false)} className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200">Cancel</button>
+                  <button type="submit" className="rounded-xl bg-orange-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-orange-600">{editingProductId ? 'Save Changes' : 'Save Product'}</button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       );
     }
@@ -1723,6 +1936,14 @@
           showToast('Please add at least one item to the order', 'error');
           return;
         }
+        const hasInvalidItem = orderForm.items.some((row) =>
+          !menuItems.some((item) => item.id === row.item_id) ||
+          !Number.isInteger(Number(row.quantity)) || Number(row.quantity) < 1
+        );
+        if (hasInvalidItem) {
+          showToast('Select a menu item and enter a whole-number quantity of at least 1.', 'error');
+          return;
+        }
 
         const compiledItems = orderForm.items.map((row) => {
           const foundItem = menuItems.find((m) => m.id === row.item_id) || menuItems[0];
@@ -1768,7 +1989,7 @@
             payment_method: orderForm.payment_method,
             created_at: new Date().toISOString()
           };
-          setOrders([newOrd, ...orders]);
+          setOrders((prev) => [newOrd, ...prev]);
           showToast(`New Order ${newOrd.order_number} created!`, 'success');
         }
 
@@ -2089,6 +2310,18 @@
                   {order.order_type} ({order.table_number})
                 </span>
               </div>
+              {order.customer_name && (
+                <div className="flex justify-between">
+                  <span>Customer:</span>
+                  <span>{order.customer_name}</span>
+                </div>
+              )}
+              {order.customer_phone && (
+                <div className="flex justify-between">
+                  <span>Phone:</span>
+                  <span>{order.customer_phone}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Payment:</span>
                 <span className="font-bold text-orange-600">{order.payment_method}</span>
@@ -2137,6 +2370,129 @@
               </button>
             </div>
           </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: KITCHEN DISPLAY SYSTEM (KDS)
+    // ==========================================
+    function KDSModule({ orders, setOrders, showToast, branches }) {
+      const advanceOrder = (order) => {
+        const nextStatus = order.status === 'New Orders' ? 'In Preparation' : order.status === 'In Preparation' ? 'Ready for Pickup' : 'Completed';
+        setOrders((prev) => prev.map((item) => item.id === order.id ? { ...item, status: nextStatus } : item));
+        showToast(`${order.order_number} moved to ${nextStatus}`, 'success');
+      };
+      const activeOrders = orders.filter((order) => !['Completed', 'Cancelled'].includes(order.status));
+      return (
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-slate-900">Kitchen Display</h2>
+          {activeOrders.length === 0 ? <div className="bg-white p-8 rounded-2xl text-center text-sm text-slate-500">No active orders.</div> : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {activeOrders.map((order) => (
+                <div key={order.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                  <div className="flex justify-between gap-3"><h3 className="font-bold">{order.order_number}</h3><span className="text-xs text-slate-500">{order.status}</span></div>
+                  <p className="text-xs text-slate-500">{branches.find((branch) => branch.id === order.branch_id)?.name || order.branch_id} · {order.order_type} · {order.table_number}</p>
+                  <ul className="text-sm space-y-1">{order.items.map((item, index) => <li key={`${item.id}-${index}`}>{item.quantity} × {item.name}{item.notes && <span className="text-xs text-slate-500"> — {item.notes}</span>}</li>)}</ul>
+                  <button onClick={() => advanceOrder(order)} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl py-2 text-xs">{order.status === 'New Orders' ? 'Start preparation' : order.status === 'In Preparation' ? 'Mark ready' : 'Complete order'}</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: MENU MANAGEMENT
+    // ==========================================
+    function MenuManagementModule({ menuItems, setMenuItems, branches, showToast }) {
+      const [form, setForm] = useState({ name: '', category: 'BBQ', price: '', stock: '50' });
+      const addItem = (event) => {
+        event.preventDefault();
+        const price = Number(form.price);
+        const stock = Number(form.stock);
+        if (!form.name.trim() || !Number.isFinite(price) || price <= 0 || !Number.isInteger(stock) || stock < 0) {
+          showToast('Enter a dish name, a valid price, and a whole-number stock quantity of zero or more.', 'error');
+          return;
+        }
+        setMenuItems((prev) => [...prev, { id: `menu-${Date.now()}`, name: form.name.trim(), category: form.category, price, stock, availability: branches.map((branch) => branch.id) }]);
+        setForm({ name: '', category: 'Burgers', price: '', stock: '50' });
+        showToast('Menu item added.', 'success');
+      };
+      return (
+        <div className="space-y-5">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h2 className="font-bold text-slate-900">Add Menu Item</h2>
+            <form onSubmit={addItem} className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Dish name" className="border rounded-xl p-2.5 text-sm" />
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="border rounded-xl p-2.5 text-sm">{['BBQ', 'Karahi', 'Handi', 'Qorma', 'Rice', 'Tandoor & Breads', 'Burgers', 'Pizzas', 'Starters', 'Chinese', 'Pasta', 'Seafood', 'Deals', 'Drinks', 'Desserts'].map((category) => <option key={category}>{category}</option>)}</select>
+              <input type="number" min="0.01" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Price (Rs.)" className="border rounded-xl p-2.5 text-sm" />
+              <input type="number" min="0" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock quantity" className="border rounded-xl p-2.5 text-sm" />
+              <button className="bg-orange-500 text-white font-bold rounded-xl p-2.5 text-sm">Add item</button>
+            </form>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto shadow-sm">
+            <table className="w-full text-left text-xs"><thead className="bg-slate-50 text-slate-500 uppercase"><tr><th className="p-3">Dish</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3">Availability</th><th className="p-3"></th></tr></thead><tbody className="divide-y">{menuItems.map((item) => <tr key={item.id}><td className="p-3 font-bold">{item.name}</td><td className="p-3">{item.category}</td><td className="p-3">Rs. {Number(item.price).toLocaleString()}</td><td className="p-3">{(item.availability || []).length} branches</td><td className="p-3 text-right"><button onClick={() => setMenuItems((prev) => prev.filter((entry) => entry.id !== item.id))} className="text-rose-600 font-bold">Remove</button></td></tr>)}{menuItems.length === 0 && <tr><td colSpan="5" className="p-6 text-center text-slate-400">No menu items yet.</td></tr>}</tbody></table>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: INVENTORY & STOCK CONTROL
+    // ==========================================
+    function InventoryModule({ inventory, setInventory, branches, selectedBranchId, showToast }) {
+      const [form, setForm] = useState({ name: '', quantity: '', reorder_level: '5' });
+      const branchId = selectedBranchId !== 'all' ? selectedBranchId : branches[0]?.id;
+      const addStock = (event) => {
+        event.preventDefault();
+        const quantity = Number(form.quantity);
+        if (!form.name.trim() || !Number.isFinite(quantity) || quantity < 0) {
+          showToast('Enter an ingredient name and a valid quantity.', 'error');
+          return;
+        }
+        setInventory((prev) => [...prev, { id: `stock-${Date.now()}`, name: form.name.trim(), quantity, reorder_level: Number(form.reorder_level) || 0, branch_id: branchId }]);
+        setForm({ name: '', quantity: '', reorder_level: '5' });
+        showToast('Inventory item added.', 'success');
+      };
+      return (
+        <div className="space-y-5">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h2 className="font-bold text-slate-900">Inventory & Stock Control</h2>
+            <form onSubmit={addStock} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ingredient / stock item" className="border rounded-xl p-2.5 text-sm" />
+              <input type="number" min="0" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="Quantity" className="border rounded-xl p-2.5 text-sm" />
+              <input type="number" min="0" value={form.reorder_level} onChange={(e) => setForm({ ...form, reorder_level: e.target.value })} placeholder="Reorder at" className="border rounded-xl p-2.5 text-sm" />
+              <button className="bg-orange-500 text-white font-bold rounded-xl p-2.5 text-sm">Add stock item</button>
+            </form>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto shadow-sm"><table className="w-full text-left text-xs"><thead className="bg-slate-50 text-slate-500 uppercase"><tr><th className="p-3">Item</th><th className="p-3">Branch</th><th className="p-3">Quantity</th><th className="p-3">Reorder level</th><th className="p-3">Status</th><th className="p-3"></th></tr></thead><tbody className="divide-y">{inventory.map((item) => <tr key={item.id}><td className="p-3 font-bold">{item.name || item.ingredient}</td><td className="p-3">{branches.find((branch) => branch.id === item.branch_id)?.name || item.branch_id}</td><td className="p-3">{item.quantity}</td><td className="p-3">{item.reorder_level}</td><td className={`p-3 font-bold ${item.quantity <= item.reorder_level ? 'text-rose-600' : 'text-emerald-600'}`}>{item.quantity <= item.reorder_level ? 'Low stock' : 'In stock'}</td><td className="p-3 text-right"><button onClick={() => setInventory((prev) => prev.filter((entry) => entry.id !== item.id))} className="text-rose-600 font-bold">Remove</button></td></tr>)}{inventory.length === 0 && <tr><td colSpan="6" className="p-6 text-center text-slate-400">No inventory recorded.</td></tr>}</tbody></table></div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // MODULE: BRANCH MANAGEMENT
+    // ==========================================
+    function BranchManagementModule({ branches, setBranches, users, setUsers, showToast }) {
+      const [form, setForm] = useState({ name: '', address: '', phone: '' });
+      const addBranch = (event) => {
+        event.preventDefault();
+        if (!form.name.trim()) { showToast('Enter a branch name.', 'error'); return; }
+        setBranches((prev) => [...prev, { id: `b-${Date.now()}`, name: form.name.trim(), address: form.address.trim(), phone: form.phone.trim(), status: 'Active' }]);
+        setForm({ name: '', address: '', phone: '' });
+        showToast('Branch added.', 'success');
+      };
+      const toggleStatus = (branch) => {
+        const status = branch.status === 'Active' ? 'Inactive' : 'Active';
+        setBranches((prev) => prev.map((entry) => entry.id === branch.id ? { ...entry, status } : entry));
+        showToast(`${branch.name} is now ${status.toLowerCase()}.`, 'success');
+      };
+      return (
+        <div className="space-y-5">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4"><h2 className="font-bold text-slate-900">Add Branch</h2><form onSubmit={addBranch} className="grid grid-cols-1 sm:grid-cols-4 gap-3"><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Branch name" className="border rounded-xl p-2.5 text-sm" /><input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Address" className="border rounded-xl p-2.5 text-sm" /><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone" className="border rounded-xl p-2.5 text-sm" /><button className="bg-orange-500 text-white font-bold rounded-xl p-2.5 text-sm">Add branch</button></form></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{branches.map((branch) => <div key={branch.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between gap-4"><div><h3 className="font-bold">{branch.name}</h3><p className="text-xs text-slate-500 mt-1">{branch.address}</p><p className="text-xs text-slate-500">{branch.phone} · {users.filter((user) => user.branch_id === branch.id).length} staff</p><span className="text-xs font-bold">{branch.status}</span></div><button onClick={() => toggleStatus(branch)} className="px-3 py-2 rounded-xl bg-slate-100 text-xs font-bold">{branch.status === 'Active' ? 'Deactivate' : 'Activate'}</button></div>)}</div>
         </div>
       );
     }

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,7 +101,7 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect, useRef } = React;
 
-    // --- CLEAN INITIAL DATA FOR ROYAL INDIA BY SPICY TWIST ---
+    // --- INITIAL DATA FOR ROYAL INDIA BY SPICY TWIST ---
     const INITIAL_BRANCHES = [
       { id: 'b1', name: 'Royal India By Spicy Twist - Gulberg Main', address: 'Main Boulevard, Gulberg III, Lahore', phone: '+92 42 111-987-654', status: 'Active' },
       { id: 'b2', name: 'Royal India By Spicy Twist - DHA Phase 5', address: 'Phase 5 Commercial Area, DHA, Lahore', phone: '+92 42 111-987-655', status: 'Active' },
@@ -154,54 +155,80 @@
       { id: 'w1', ingredient: 'Fresh Tomatoes', qty: '3 kg', cost: 450, reason: 'Spoiled during storage', branchId: 'b1', date: '2026-11-08' }
     ];
 
-    const INITIAL_MENU = [];
-    const INITIAL_ORDERS = [];
-    const INITIAL_INVENTORY = [];
-    const BACKUP_STORAGE_KEY = 'zuraiz-special-backup';
-    const BACKUP_ARRAY_KEYS = ['branches', 'users', 'menuItems', 'orders', 'inventory', 'customers', 'giftCards', 'promos', 'reservations', 'shifts', 'attendance', 'recipes', 'voidLogs', 'wasteLogs'];
-    const SAVED_BACKUP = (() => {
-      try {
-        const saved = JSON.parse(window.localStorage.getItem(BACKUP_STORAGE_KEY) || 'null');
-        return saved?.version === 1 && saved.data ? saved.data : null;
-      } catch (error) {
-        return null;
-      }
-    })();
+    const INITIAL_MENU = [
+      { id: 'm1', name: 'Chicken Karahi', category: 'Karahi', price: 1400, stock: 40, availability: ['b1', 'b2', 'b3'], image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=300&auto=format&fit=crop&q=80' },
+      { id: 'm2', name: 'Special Zuraiz Burger', category: 'Burgers', price: 650, stock: 25, availability: ['b1', 'b2', 'b3'], image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&auto=format&fit=crop&q=80' },
+      { id: 'm3', name: 'Chicken Biryani', category: 'Rice', price: 450, stock: 60, availability: ['b1', 'b2', 'b3'], image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=300&auto=format&fit=crop&q=80' },
+      { id: 'm4', name: 'Reshmi Kabab', category: 'BBQ', price: 850, stock: 30, availability: ['b1', 'b2', 'b3'], image: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=300&auto=format&fit=crop&q=80' }
+    ];
 
-    // Icon helper component for rendering lucide icons dynamically in browser environment
+    const INITIAL_ORDERS = [
+      { id: 'ord-101', order_number: '#1001', branch_id: 'b1', table_number: 'T-01', customer_name: 'Ali Khan', customer_phone: '+92 300 9876543', order_type: 'Dine-in', status: 'Completed', items: [{ id: 'm1', name: 'Chicken Karahi', price: 1400, quantity: 1, notes: 'Medium Spicy' }], total_amount: 1624, payment_method: 'Cash', created_at: new Date().toISOString() },
+      { id: 'ord-102', order_number: '#1002', branch_id: 'b2', table_number: 'T-04', customer_name: 'Sara Ahmed', customer_phone: '+92 321 8765432', order_type: 'Takeaway', status: 'In Preparation', items: [{ id: 'm2', name: 'Special Zuraiz Burger', price: 650, quantity: 2, notes: 'Extra cheese' }], total_amount: 1508, payment_method: 'Card', created_at: new Date().toISOString() }
+    ];
+
+    const INITIAL_INVENTORY = [
+      { id: 'inv-1', name: 'Chicken', quantity: 45, reorder_level: 10, branch_id: 'b1' },
+      { id: 'inv-2', name: 'Desi Ghee', quantity: 12, reorder_level: 5, branch_id: 'b1' },
+      { id: 'inv-3', name: 'Burger Buns', quantity: 4, reorder_level: 15, branch_id: 'b2' }
+    ];
+
+    const BACKUP_STORAGE_KEY = 'zuraiz-special-backup';
+
     function Icon({ name, className = "w-5 h-5", ...props }) {
       useEffect(() => {
         if (window.lucide) {
           window.lucide.createIcons();
         }
       }, [name]);
-      // Keep Lucide's DOM replacement inside a wrapper React can safely remove.
       return <span className="contents" aria-hidden="true"><i data-lucide={name} className={className} {...props}></i></span>;
     }
 
     function App() {
-      // --- GLOBAL STATE ---
-      const [branches, setBranches] = useState(SAVED_BACKUP?.branches || INITIAL_BRANCHES);
-      const [selectedBranchId, setSelectedBranchId] = useState(SAVED_BACKUP?.selectedBranchId || 'all');
-      const [users, setUsers] = useState(SAVED_BACKUP?.users || INITIAL_USERS);
-      const [currentUser, setCurrentUser] = useState(SAVED_BACKUP?.users?.find((user) => user.id === SAVED_BACKUP.currentUserId) || INITIAL_USERS[0]);
-      const [menuItems, setMenuItems] = useState(SAVED_BACKUP?.menuItems || INITIAL_MENU);
-      const [orders, setOrdersState] = useState(SAVED_BACKUP?.orders || INITIAL_ORDERS);
-      const [inventory, setInventory] = useState(SAVED_BACKUP?.inventory || INITIAL_INVENTORY);
-      const [customers, setCustomers] = useState(SAVED_BACKUP?.customers || INITIAL_CUSTOMERS);
-      const [giftCards, setGiftCards] = useState(SAVED_BACKUP?.giftCards || INITIAL_GIFT_CARDS);
-      const [promos, setPromos] = useState(SAVED_BACKUP?.promos || INITIAL_PROMOS);
-      const [reservations, setReservations] = useState(SAVED_BACKUP?.reservations || INITIAL_RESERVATIONS);
-      const [shifts, setShifts] = useState(SAVED_BACKUP?.shifts || INITIAL_SHIFTS);
-      const [attendance, setAttendance] = useState(SAVED_BACKUP?.attendance || INITIAL_ATTENDANCE);
-      const [recipes, setRecipes] = useState(SAVED_BACKUP?.recipes || INITIAL_RECIPES);
-      const [voidLogs, setVoidLogs] = useState(SAVED_BACKUP?.voidLogs || INITIAL_VOID_LOGS);
-      const [wasteLogs, setWasteLogs] = useState(SAVED_BACKUP?.wasteLogs || INITIAL_WASTE_LOGS);
-      const [registerState, setRegisterState] = useState(SAVED_BACKUP?.registerState || { isOpen: true, openingBalance: 10000, cashDrops: [], currentCash: 10000 });
+      // --- LOCALSTORAGE PERSISTENCE INITIALIZATION ---
+      const loadSavedData = () => {
+        try {
+          const saved = JSON.parse(window.localStorage.getItem(BACKUP_STORAGE_KEY) || 'null');
+          return saved?.data || null;
+        } catch (e) {
+          return null;
+        }
+      };
+
+      const savedData = loadSavedData();
+
+      // --- GLOBAL STATE WITH LOCALSTORAGE FALLBACKS ---
+      const [branches, setBranches] = useState(savedData?.branches || INITIAL_BRANCHES);
+      const [selectedBranchId, setSelectedBranchId] = useState(savedData?.selectedBranchId || 'all');
+      const [users, setUsers] = useState(savedData?.users || INITIAL_USERS);
+      const [currentUser, setCurrentUser] = useState(savedData?.users?.find((u) => u.id === savedData.currentUserId) || INITIAL_USERS[0]);
+      const [menuItems, setMenuItems] = useState(savedData?.menuItems || INITIAL_MENU);
+      const [orders, setOrdersState] = useState(savedData?.orders || INITIAL_ORDERS);
+      const [inventory, setInventory] = useState(savedData?.inventory || INITIAL_INVENTORY);
+      const [customers, setCustomers] = useState(savedData?.customers || INITIAL_CUSTOMERS);
+      const [giftCards, setGiftCards] = useState(savedData?.giftCards || INITIAL_GIFT_CARDS);
+      const [promos, setPromos] = useState(savedData?.promos || INITIAL_PROMOS);
+      const [reservations, setReservations] = useState(savedData?.reservations || INITIAL_RESERVATIONS);
+      const [shifts, setShifts] = useState(savedData?.shifts || INITIAL_SHIFTS);
+      const [attendance, setAttendance] = useState(savedData?.attendance || INITIAL_ATTENDANCE);
+      const [recipes, setRecipes] = useState(savedData?.recipes || INITIAL_RECIPES);
+      const [voidLogs, setVoidLogs] = useState(savedData?.voidLogs || INITIAL_VOID_LOGS);
+      const [wasteLogs, setWasteLogs] = useState(savedData?.wasteLogs || INITIAL_WASTE_LOGS);
+      const [registerState, setRegisterState] = useState(savedData?.registerState || { isOpen: true, openingBalance: 10000, cashDrops: [], currentCash: 10000 });
+
+      // Save state changes to LocalStorage automatically
+      useEffect(() => {
+        const dataToSave = {
+          branches, users, menuItems, orders, inventory, customers, giftCards, promos,
+          reservations, shifts, attendance, recipes, voidLogs, wasteLogs, registerState,
+          selectedBranchId, currentUserId: currentUser?.id
+        };
+        const backupPayload = { app: 'Royal India By Spicy Twist', version: 1, exportedAt: new Date().toISOString(), data: dataToSave };
+        window.localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(backupPayload));
+      }, [branches, users, menuItems, orders, inventory, customers, giftCards, promos, reservations, shifts, attendance, recipes, voidLogs, wasteLogs, registerState, selectedBranchId, currentUser]);
+
       const backupFileInputRef = useRef(null);
       const [restoreMessage, setRestoreMessage] = useState('');
-      
-      // Cash Register State
       const [showZReportModal, setShowZReportModal] = useState(false);
 
       const [activeTab, setActiveTab] = useState('dashboard');
@@ -221,10 +248,8 @@
         setMobileNavOpen(false);
       }, [activeTab]);
 
-      // Modals state
       const [receiptModalOrder, setReceiptModalOrder] = useState(null);
 
-      // Toast Notification Helper
       const showToast = (message, type = 'success') => {
         const id = Date.now();
         setToasts((prev) => [...prev, { id, message, type }]);
@@ -237,14 +262,13 @@
         setOrdersState((previousOrders) => typeof update === 'function' ? update(previousOrders) : update);
       };
 
-      const getBackupData = () => ({
-        branches, users, menuItems, orders, inventory, customers, giftCards, promos,
-        reservations, shifts, attendance, recipes, voidLogs, wasteLogs, registerState,
-        selectedBranchId, currentUserId: currentUser.id
-      });
-
       const handleExportBackup = () => {
-        const backup = { app: 'Royal India By Spicy Twist', version: 1, exportedAt: new Date().toISOString(), data: getBackupData() };
+        const dataToSave = {
+          branches, users, menuItems, orders, inventory, customers, giftCards, promos,
+          reservations, shifts, attendance, recipes, voidLogs, wasteLogs, registerState,
+          selectedBranchId, currentUserId: currentUser.id
+        };
+        const backup = { app: 'Royal India By Spicy Twist', version: 1, exportedAt: new Date().toISOString(), data: dataToSave };
         const file = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(file);
         const link = document.createElement('a');
@@ -261,39 +285,38 @@
         try {
           const backup = JSON.parse(await file.text());
           const data = backup?.version === 1 ? backup.data : null;
-          if (!data || !BACKUP_ARRAY_KEYS.every((key) => Array.isArray(data[key])) || !data.registerState || !Array.isArray(data.registerState.cashDrops)) {
-            throw new Error('Invalid backup structure');
-          }
-          const savedBackup = { app: 'Royal India By Spicy Twist', version: 1, exportedAt: backup.exportedAt || new Date().toISOString(), data };
-          window.localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(savedBackup));
-          setBranches(data.branches);
-          setUsers(data.users);
-          setMenuItems(data.menuItems);
-          setOrders(data.orders);
-          setInventory(data.inventory);
-          setCustomers(data.customers);
-          setGiftCards(data.giftCards);
-          setPromos(data.promos);
-          setReservations(data.reservations);
-          setShifts(data.shifts);
-          setAttendance(data.attendance);
-          setRecipes(data.recipes);
-          setVoidLogs(data.voidLogs);
-          setWasteLogs(data.wasteLogs);
-          setRegisterState(data.registerState);
+          if (!data) throw new Error('Invalid structure');
+          
+          window.localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(backup));
+          setBranches(data.branches || INITIAL_BRANCHES);
+          setUsers(data.users || INITIAL_USERS);
+          setMenuItems(data.menuItems || INITIAL_MENU);
+          setOrders(data.orders || INITIAL_ORDERS);
+          setInventory(data.inventory || INITIAL_INVENTORY);
+          setCustomers(data.customers || INITIAL_CUSTOMERS);
+          setGiftCards(data.giftCards || INITIAL_GIFT_CARDS);
+          setPromos(data.promos || INITIAL_PROMOS);
+          setReservations(data.reservations || INITIAL_RESERVATIONS);
+          setShifts(data.shifts || INITIAL_SHIFTS);
+          setAttendance(data.attendance || INITIAL_ATTENDANCE);
+          setRecipes(data.recipes || INITIAL_RECIPES);
+          setVoidLogs(data.voidLogs || INITIAL_VOID_LOGS);
+          setWasteLogs(data.wasteLogs || INITIAL_WASTE_LOGS);
+          setRegisterState(data.registerState || { isOpen: true, openingBalance: 10000, cashDrops: [], currentCash: 10000 });
           setSelectedBranchId(data.selectedBranchId || 'all');
-          const restoredUser = data.users.find((user) => user.id === data.currentUserId);
+          
+          const restoredUser = (data.users || INITIAL_USERS).find((user) => user.id === data.currentUserId);
           if (restoredUser) setCurrentUser(restoredUser);
+          
           setRestoreMessage('Backup restored. Sign in to continue with your restored data.');
           setLoginError('');
         } catch (error) {
           setRestoreMessage('');
-          setLoginError('Could not restore this file. Please choose a valid Zuraiz JSON backup.');
+          setLoginError('Could not restore this file. Please choose a valid JSON backup.');
         }
         event.target.value = '';
       };
 
-      // Branch Selector Filter helper
       const filteredOrders = useMemo(() => {
         if (selectedBranchId === 'all') return orders;
         return orders.filter((o) => o.branch_id === selectedBranchId);
@@ -380,7 +403,7 @@
 
       return (
         <div className="flex h-screen bg-slate-100 text-slate-800 font-sans overflow-hidden">
-          {/* --- TOAST CONTAINER --- */}
+          {/* TOAST CONTAINER */}
           <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
             {toasts.map((toast) => (
               <div
@@ -399,14 +422,13 @@
             ))}
           </div>
 
-          {/* --- SIDEBAR --- */}
+          {/* SIDEBAR */}
           <aside
             className={`app-sidebar ${mobileNavOpen ? 'mobile-nav-open' : 'mobile-nav-closed'} ${
               sidebarCollapsed ? 'w-20' : 'w-64'
             } bg-white border-r border-slate-200 flex flex-col justify-between transition-all duration-300 z-30 relative shadow-sm`}
           >
             <div className="flex flex-col h-full overflow-hidden">
-              {/* Logo Branding */}
               <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 shrink-0">
                 {!sidebarCollapsed && (
                   <div className="flex items-center gap-3">
@@ -437,7 +459,6 @@
                 </button>
               </div>
 
-              {/* Navigation Links - Scrollable */}
               <nav className="p-3 space-y-1 overflow-y-auto flex-1">
                 <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1">Core Operations</div>
                 <NavItem icon={<Icon name="layout-dashboard" className="w-4 h-4" />} label="Dashboard Overview" active={activeTab === 'dashboard'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('dashboard')} />
@@ -465,7 +486,6 @@
                 <NavItem icon={<Icon name="building-2" className="w-4 h-4" />} label="Branch Management" active={activeTab === 'branches'} collapsed={sidebarCollapsed} onClick={() => setActiveTab('branches')} />
               </nav>
 
-              {/* User Role Quick Switcher Footer */}
               <div className="p-3 border-t border-slate-200 shrink-0">
                 {!sidebarCollapsed ? (
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between">
@@ -494,18 +514,17 @@
             />
           )}
 
-          {/* Persistent mobile navigation; the sidebar menu remains available above. */}
           <nav aria-label="Mobile navigation" className="mobile-bottom-nav md:hidden">
-            <button type="button" onClick={() => setActiveTab('dashboard')} className={activeTab === 'dashboard' ? 'active' : ''} aria-current={activeTab === 'dashboard' ? 'page' : undefined}>
+            <button type="button" onClick={() => setActiveTab('dashboard')} className={activeTab === 'dashboard' ? 'active' : ''}>
               <Icon name="layout-dashboard" className="w-5 h-5" /><span>Home</span>
             </button>
-            <button type="button" onClick={() => setActiveTab('pos')} className={activeTab === 'pos' ? 'active' : ''} aria-current={activeTab === 'pos' ? 'page' : undefined}>
+            <button type="button" onClick={() => setActiveTab('pos')} className={activeTab === 'pos' ? 'active' : ''}>
               <Icon name="shopping-bag" className="w-5 h-5" /><span>POS</span>
             </button>
-            <button type="button" onClick={() => setActiveTab('orders')} className={activeTab === 'orders' ? 'active' : ''} aria-current={activeTab === 'orders' ? 'page' : undefined}>
+            <button type="button" onClick={() => setActiveTab('orders')} className={activeTab === 'orders' ? 'active' : ''}>
               <Icon name="clipboard-list" className="w-5 h-5" /><span>Orders</span>
             </button>
-            <button type="button" onClick={() => setActiveTab('kds')} className={activeTab === 'kds' ? 'active' : ''} aria-current={activeTab === 'kds' ? 'page' : undefined}>
+            <button type="button" onClick={() => setActiveTab('kds')} className={activeTab === 'kds' ? 'active' : ''}>
               <Icon name="utensils-crossed" className="w-5 h-5" /><span>Kitchen</span>
             </button>
             <button type="button" onClick={() => { setSidebarCollapsed(false); setMobileNavOpen(true); }}>
@@ -513,9 +532,8 @@
             </button>
           </nav>
 
-          {/* --- MAIN CONTENT CONTAINER --- */}
+          {/* MAIN CONTENT CONTAINER */}
           <div className="flex-1 flex flex-col h-screen overflow-hidden">
-            {/* --- HEADER NAVBAR --- */}
             <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shadow-sm shrink-0">
               <div className="flex items-center gap-4">
                 <button
@@ -534,7 +552,6 @@
                 </h2>
                 <div className="h-4 w-px bg-slate-300"></div>
 
-                {/* Global Branch Selector Dropdown */}
                 <div className="relative">
                   <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 text-xs text-slate-700 px-3 py-1.5 rounded-lg hover:border-orange-500/50 transition cursor-pointer">
                     <Icon name="building-2" className="w-3.5 h-3.5 text-orange-500" />
@@ -544,9 +561,9 @@
                       onChange={(e) => setSelectedBranchId(e.target.value)}
                       className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer pr-2"
                     >
-                      <option value="all" className="bg-white text-slate-900">🌐 All Branches (Aggregated PKR)</option>
+                      <option value="all" className="bg-white text-slate-900">All Branches (Aggregated PKR)</option>
                       {branches.map((b) => (
-                        <option key={b.id} value={b.id} className="bg-white text-slate-900">📍 {b.name}</option>
+                        <option key={b.id} value={b.id} className="bg-white text-slate-900">{b.name}</option>
                       ))}
                     </select>
                   </div>
@@ -623,7 +640,6 @@
               </div>
             </header>
 
-            {/* --- DYNAMIC MODULE CONTENT BODY --- */}
             <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
               {activeTab === 'dashboard' && <DashboardModule orders={filteredOrders} inventory={filteredInventory} branches={branches} selectedBranchId={selectedBranchId} menuItems={menuItems} onExportBackup={handleExportBackup} />}
               {activeTab === 'pos' && <POSModule menuItems={filteredMenu} setMenuItems={setMenuItems} selectedBranchId={selectedBranchId} branches={branches} orders={orders} setOrders={setOrders} setRegisterState={setRegisterState} showToast={showToast} setReceiptModalOrder={setReceiptModalOrder} promos={promos} giftCards={giftCards} setGiftCards={setGiftCards} />}
@@ -645,7 +661,6 @@
             </main>
           </div>
 
-          {/* --- PRINT RECEIPT MODAL --- */}
           {receiptModalOrder && (
             <ReceiptModal
               order={receiptModalOrder}
@@ -654,7 +669,6 @@
             />
           )}
 
-          {/* --- Z-REPORT MODAL --- */}
           {showZReportModal && (
             <ZReportModal registerState={registerState} orders={filteredOrders} onClose={() => setShowZReportModal(false)} />
           )}
@@ -663,10 +677,12 @@
     }
 
     // ==========================================
-    // MODULE 1: DASHBOARD OVERVIEW (8 KPI CARDS + 8 ANALYTICAL CHARTS)
+    // MODULE 1: DASHBOARD OVERVIEW (REAL-TIME CHARTS & METRICS)
     // ==========================================
     function DashboardModule({ orders, inventory, branches, selectedBranchId, menuItems, onExportBackup }) {
-      const totalRevenue = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + Number(o.total_amount), 0);
+      const activeOrders = useMemo(() => orders.filter((o) => o.status !== 'Cancelled'), [orders]);
+
+      const totalRevenue = useMemo(() => activeOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0), [activeOrders]);
       const totalOrders = orders.length;
       const activeDineIn = orders.filter((o) => o.order_type === 'Dine-in' && o.status !== 'Completed' && o.status !== 'Cancelled').length;
       const takeawayOrders = orders.filter((o) => o.order_type === 'Takeaway').length;
@@ -675,63 +691,136 @@
       const lowStockCount = inventory.filter((i) => i.quantity <= i.reorder_level).length;
       const activeBranchesCount = branches.filter((b) => b.status === 'Active').length;
 
-      const branchRevenueData = branches.map((b) => {
-        const rev = orders.filter((o) => o.branch_id === b.id && o.status !== 'Cancelled').reduce((sum, o) => sum + Number(o.total_amount), 0);
-        return { name: b.name.split('-')[1]?.trim() || b.name, revenue: rev };
-      });
+      // --- REALTIME DYNAMIC CHART DATA CALCULATION ---
+      // 1. Branch Revenue
+      const branchRevenueData = useMemo(() => {
+        return branches.map((b) => {
+          const rev = orders.filter((o) => o.branch_id === b.id && o.status !== 'Cancelled').reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+          return { name: b.name.split('-')[1]?.trim() || b.name, revenue: rev };
+        });
+      }, [branches, orders]);
       const maxRevenue = Math.max(...branchRevenueData.map((d) => d.revenue), 1000);
 
-      // --- MOCK DASHBOARD CHART DATA ---
-      const orderTypeData = [
-        { label: 'Dine-In', count: orders.filter((o) => o.order_type === 'Dine-in').length || 14, color: 'bg-orange-500' },
-        { label: 'Takeaway', count: orders.filter((o) => o.order_type === 'Takeaway').length || 8, color: 'bg-amber-500' },
-        { label: 'Delivery', count: orders.filter((o) => o.order_type === 'Delivery').length || 5, color: 'bg-teal-500' }
-      ];
-      const maxOrderType = Math.max(...orderTypeData.map((d) => d.count));
+      // 2. Order Types Realtime Breakdown
+      const orderTypeData = useMemo(() => {
+        const dineIn = orders.filter((o) => o.order_type === 'Dine-in').length;
+        const takeaway = orders.filter((o) => o.order_type === 'Takeaway').length;
+        const delivery = orders.filter((o) => o.order_type === 'Delivery').length;
+        return [
+          { label: 'Dine-In', count: dineIn, color: 'bg-orange-500' },
+          { label: 'Takeaway', count: takeaway, color: 'bg-amber-500' },
+          { label: 'Delivery', count: delivery, color: 'bg-teal-500' }
+        ];
+      }, [orders]);
+      const maxOrderType = Math.max(...orderTypeData.map((d) => d.count), 1);
 
-      const hourlySalesData = [
-        { hour: '12 PM', sales: 4500 }, { hour: '2 PM', sales: 8200 },
-        { hour: '4 PM', sales: 3100 }, { hour: '6 PM', sales: 9400 },
-        { hour: '8 PM', sales: 14500 }, { hour: '10 PM', sales: 11200 }
-      ];
-      const maxHourly = Math.max(...hourlySalesData.map((d) => d.sales));
+      // 3. Peak Hourly Traffic (Dynamic extraction from created_at timestamps)
+      const hourlySalesData = useMemo(() => {
+        const hours = ['12 PM', '2 PM', '4 PM', '6 PM', '8 PM', '10 PM'];
+        const dataMap = { '12 PM': 0, '2 PM': 0, '4 PM': 0, '6 PM': 0, '8 PM': 0, '10 PM': 0 };
+        activeOrders.forEach(o => {
+          const dt = new Date(o.created_at);
+          const hr = dt.getHours();
+          if (hr >= 11 && hr < 13) dataMap['12 PM'] += o.total_amount;
+          else if (hr >= 13 && hr < 15) dataMap['2 PM'] += o.total_amount;
+          else if (hr >= 15 && hr < 17) dataMap['4 PM'] += o.total_amount;
+          else if (hr >= 17 && hr < 19) dataMap['6 PM'] += o.total_amount;
+          else if (hr >= 19 && hr < 21) dataMap['8 PM'] += o.total_amount;
+          else dataMap['10 PM'] += o.total_amount;
+        });
+        return hours.map(h => ({ hour: h, sales: dataMap[h] }));
+      }, [activeOrders]);
+      const maxHourly = Math.max(...hourlySalesData.map((d) => d.sales), 1000);
 
-      const categorySalesData = [
-        { cat: 'Karahi & BBQ', percent: 45, color: 'bg-orange-500' },
-        { cat: 'Burgers & Wraps', percent: 25, color: 'bg-amber-500' },
-        { cat: 'Starters & Sides', percent: 18, color: 'bg-sky-500' },
-        { cat: 'Beverages & Desserts', percent: 12, color: 'bg-emerald-500' }
-      ];
+      // 4. Menu Category Share (Dynamic based on ordered items)
+      const categorySalesData = useMemo(() => {
+        const catMap = {};
+        let totalItemsCount = 0;
+        activeOrders.forEach(o => {
+          (o.items || []).forEach(it => {
+            const menuItem = menuItems.find(m => m.id === it.id || m.name === it.name);
+            const cat = menuItem?.category || 'BBQ';
+            catMap[cat] = (catMap[cat] || 0) + (it.quantity || 1);
+            totalItemsCount += (it.quantity || 1);
+          });
+        });
+        const categories = Object.keys(catMap);
+        if (categories.length === 0 || totalItemsCount === 0) {
+          return [
+            { cat: 'Karahi & BBQ', percent: 45, color: 'bg-orange-500' },
+            { cat: 'Burgers & Wraps', percent: 25, color: 'bg-amber-500' },
+            { cat: 'Starters & Sides', percent: 18, color: 'bg-sky-500' },
+            { cat: 'Beverages & Desserts', percent: 12, color: 'bg-emerald-500' }
+          ];
+        }
+        const colors = ['bg-orange-500', 'bg-amber-500', 'bg-sky-500', 'bg-emerald-500', 'bg-purple-500', 'bg-rose-500'];
+        return categories.slice(0, 4).map((c, idx) => ({
+          cat: c,
+          percent: Math.round((catMap[c] / totalItemsCount) * 100),
+          color: colors[idx % colors.length]
+        }));
+      }, [activeOrders, menuItems]);
 
-      const paymentMethodData = [
-        { type: 'Cash in Drawer', val: 62, color: 'bg-emerald-500' },
-        { type: 'Card POS Swipe', val: 28, color: 'bg-indigo-500' },
-        { type: 'Gift Cards & Vouchers', val: 10, color: 'bg-orange-500' }
-      ];
+      // 5. Payment Methods Dynamic Breakdown
+      const paymentMethodData = useMemo(() => {
+        const total = activeOrders.length || 1;
+        const cash = activeOrders.filter(o => o.payment_method === 'Cash').length;
+        const card = activeOrders.filter(o => o.payment_method === 'Card').length;
+        const gift = activeOrders.filter(o => o.payment_method === 'Gift Card').length;
+        return [
+          { type: 'Cash in Drawer', val: Math.round((cash / total) * 100), color: 'bg-emerald-500' },
+          { type: 'Card POS Swipe', val: Math.round((card / total) * 100), color: 'bg-indigo-500' },
+          { type: 'Gift Cards & Vouchers', val: Math.round((gift / total) * 100), color: 'bg-orange-500' }
+        ];
+      }, [activeOrders]);
 
-      const weeklyTrend = [
-        { day: 'Mon', rev: 24000 }, { day: 'Tue', rev: 28500 },
-        { day: 'Wed', rev: 31000 }, { day: 'Thu', rev: 29000 },
-        { day: 'Fri', rev: 45000 }, { day: 'Sat', rev: 52000 }, { day: 'Sun', rev: 48000 }
-      ];
-      const maxWeekly = Math.max(...weeklyTrend.map((d) => d.rev));
+      // 6. Weekly Trend (Dynamic by Day of week)
+      const weeklyTrend = useMemo(() => {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayMap = { 'Sun': 0, 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0 };
+        activeOrders.forEach(o => {
+          const dName = days[new Date(o.created_at).getDay()];
+          dayMap[dName] += o.total_amount;
+        });
+        return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => ({ day: d, rev: dayMap[d] }));
+      }, [activeOrders]);
+      const maxWeekly = Math.max(...weeklyTrend.map((d) => d.rev), 1000);
 
-      const kdsSpeedData = [
-        { stage: '< 10 mins (Fast)', val: 70, color: 'bg-emerald-500' },
-        { stage: '10 - 20 mins (Normal)', val: 22, color: 'bg-amber-500' },
-        { stage: '> 20 mins (Delayed)', val: 8, color: 'bg-rose-500' }
-      ];
+      // 7. Kitchen Preparation Speed
+      const kdsSpeedData = useMemo(() => {
+        const ready = orders.filter(o => o.status === 'Completed' || o.status === 'Ready for Pickup').length;
+        const prep = orders.filter(o => o.status === 'In Preparation').length;
+        const newOrds = orders.filter(o => o.status === 'New Orders').length;
+        const total = orders.length || 1;
+        return [
+          { stage: '< 10 mins (Completed/Ready)', val: Math.round((ready / total) * 100), color: 'bg-emerald-500' },
+          { stage: '10 - 20 mins (In Prep)', val: Math.round((prep / total) * 100), color: 'bg-amber-500' },
+          { stage: '> 20 mins (Pending)', val: Math.round((newOrds / total) * 100), color: 'bg-rose-500' }
+        ];
+      }, [orders]);
 
-      const inventoryHealthData = [
-        { name: 'Poultry / Meat', level: 85, color: 'bg-emerald-500' },
-        { name: 'Dairy & Ghee', level: 60, color: 'bg-amber-500' },
-        { name: 'Spices & Sauces', level: 35, color: 'bg-amber-600' },
-        { name: 'Packaging Boxes', level: 15, color: 'bg-rose-500' }
-      ];
+      // 8. Inventory Health Status Dynamic Calculation
+      const inventoryHealthData = useMemo(() => {
+        if (inventory.length === 0) {
+          return [
+            { name: 'Poultry / Meat', level: 85, color: 'bg-emerald-500' },
+            { name: 'Dairy & Ghee', level: 60, color: 'bg-amber-500' },
+            { name: 'Spices & Sauces', level: 35, color: 'bg-amber-600' },
+            { name: 'Packaging Boxes', level: 15, color: 'bg-rose-500' }
+          ];
+        }
+        return inventory.slice(0, 4).map(i => {
+          const lvl = Math.min(100, Math.round((i.quantity / (i.reorder_level * 3 || 15)) * 100));
+          return {
+            name: i.name,
+            level: lvl,
+            color: lvl > 50 ? 'bg-emerald-500' : lvl > 20 ? 'bg-amber-500' : 'bg-rose-500'
+          };
+        });
+      }, [inventory]);
 
       return (
         <div className="space-y-6">
-          {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div>
               <h2 className="text-xl font-extrabold text-slate-900">Royal India By Spicy Twist Executive Dashboard</h2>
@@ -749,7 +838,6 @@
             </div>
           </div>
 
-          {/* 8 KPI SUMMARY CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard title="Total Gross Revenue" value={`Rs. ${totalRevenue.toLocaleString()}`} subtext="Sales across active orders" icon={<Icon name="coins" className="w-5 h-5 text-orange-600" />} />
             <KpiCard title="Total Orders Count" value={totalOrders} subtext="All status orders processed" icon={<Icon name="clipboard-list" className="w-5 h-5 text-sky-600" />} />
@@ -761,7 +849,6 @@
             <KpiCard title="Active Branches" value={activeBranchesCount} subtext="Royal India By Spicy Twist locations" icon={<Icon name="building-2" className="w-5 h-5 text-orange-500" />} />
           </div>
 
-          {/* 8 ANALYTICAL VISUALIZER CHARTS */}
           <div className="space-y-4 pt-2">
             <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
               <Icon name="pie-chart" className="w-5 h-5 text-orange-600" /> Executive Analytics & 8 Visual Charts
@@ -986,12 +1073,11 @@
     }
 
     // ==========================================
-    // MODULE: SALES & FINANCIAL REPORTS (GST Breakdown)
+    // MODULE: SALES & FINANCIAL REPORTS
     // ==========================================
     function SalesReportsModule({ orders, voidLogs, branches }) {
       const activeOrders = orders.filter((o) => o.status !== 'Cancelled');
       const grossSales = activeOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
-      // Order totals already include 16% GST, so extract the tax portion from gross.
       const totalGST = grossSales * (16 / 116);
       const netSales = grossSales - totalGST;
 
@@ -1066,9 +1152,9 @@
       const [wasteForm, setWasteForm] = useState({ ingredient: '', qty: '', cost: '', reason: '' });
       const grossSales = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + o.total_amount, 0);
       const totalLaborHours = attendance.reduce((sum, a) => sum + Number(a.totalHours || 0), 0);
-      const estimatedLaborCost = totalLaborHours * 750; // Average Rs. 750 / hr
+      const estimatedLaborCost = totalLaborHours * 750;
       const totalWasteCost = wasteLogs.reduce((sum, w) => sum + Number(w.cost), 0);
-      const estimatedCOGS = grossSales * 0.32; // Estimated 32% food cost
+      const estimatedCOGS = grossSales * 0.32;
       const primeCost = estimatedCOGS + estimatedLaborCost;
 
       const laborPercent = grossSales > 0 ? ((estimatedLaborCost / grossSales) * 100).toFixed(1) : 0;
@@ -1575,7 +1661,7 @@
     }
 
     // ==========================================
-    // MODULE 2: POINT OF SALE (POS) & BILLING (PKR & GIFT CARDS)
+    // MODULE 2: POINT OF SALE (POS) & BILLING
     // ==========================================
     function POSModule({ menuItems, setMenuItems, selectedBranchId, branches, orders, setOrders, setRegisterState, showToast, setReceiptModalOrder, promos, giftCards, setGiftCards }) {
       const [cart, setCart] = useState([]);
@@ -1719,7 +1805,7 @@
 
       const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
       const discountAmount = Math.min(subtotal, (subtotal * discountPercent) / 100 + fixedDiscount);
-      const tax = (subtotal - discountAmount) * 0.16; // 16% Pakistani GST
+      const tax = (subtotal - discountAmount) * 0.16;
       const grandTotal = subtotal - discountAmount + tax;
 
       const applyDiscount = () => {
@@ -1912,7 +1998,6 @@
             )}
           </div>
 
-          {/* Right Cart Panel */}
           <div className="w-full lg:w-96 bg-white border border-slate-200 rounded-2xl flex flex-col justify-between p-4 shadow-sm">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -2365,7 +2450,6 @@
             </table>
           </div>
 
-          {/* CREATE / EDIT ORDER MODAL */}
           {addModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
               <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
@@ -2447,7 +2531,6 @@
                     </div>
                   </div>
 
-                  {/* Order Items Selector */}
                   <div className="border-t border-slate-100 pt-3">
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-slate-700 font-bold">Select Order Items</label>
@@ -2759,7 +2842,6 @@
       );
     }
 
-    // Render the App into the root container
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
